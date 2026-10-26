@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-motion="full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFF8F0">
+<title>Sign in · Beasties</title>
+<!-- Per the handoff, the sign-in page shows no private group photos. -->
+<script type="module" src="/src/signin.js"></script>
+</head>
+<body class="signin-page">
+
+<div id="chrome"></div>
+
+<main id="main" class="signin">
+  <div class="signin__art" aria-hidden="true">
+    <p class="signin__mark">A Family<br>of <em>Friends</em></p>
+  </div>
+  <div class="signin__panel">
+    <h1 class="album-title">Sign in</h1>
+    <p class="body-muted">The Beasties site is private. Sign in with the email and password you were given.</p>
+    <form class="signin__form" id="form" novalidate>
+      <label class="field">
+        <span class="field__label">Email</span>
+        <input class="field__input" type="email" name="email" autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span class="field__label">Password</span>
+        <input class="field__input" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="form-error" id="error" role="alert" hidden></p>
+      <button class="btn btn--plum" type="submit" id="submit">Sign in</button>
+    </form>
+  </div>
+</main>
+
+</body>
+</html>

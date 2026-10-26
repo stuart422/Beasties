@@ -1,0 +1,40 @@
+{
+  "name": "beasties-working",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Working local version of the Beasties member site. Runs on this computer only. Not for deployment.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server/index.js",
+    "dev:home": "node --env-file-if-exists=.env server/index.js --home",
+    "build": "vite build --config vite.config.js",
+    "start": "node --env-file-if-exists=.env server/index.js --prod",
+    "db:setup": "node --env-file-if-exists=.env server/seed.js",
+    "reset-test-data": "node server/seed.js --reset",
+    "blob:upload-photos": "node --env-file-if-exists=.env scripts/upload-photos-to-blob.js",
+    "selftest:images": "node server/selftest-images.mjs",
+    "add-member": "node --env-file-if-exists=.env scripts/add-member.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.12",
+    "@fontsource-variable/figtree": "^5.3.0",
+    "@fontsource/dm-serif-display": "^5.3.0",
+    "@vercel/blob": "^2.8.2",
+    "bcryptjs": "^3.0.3",
+    "exif-reader": "^2.0.3",
+    "express": "^5.3.0",
+    "gsap": "^3.15.0",
+    "heic-convert": "^2.1.0",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1",
+    "sharp": "^0.35.5",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite-socket": "^0.2.15",
+    "vite": "^8.3.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

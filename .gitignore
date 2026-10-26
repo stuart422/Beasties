@@ -1,0 +1,27 @@
+# Private photos: never in git. On Vercel they live in private Blob storage.
+photos/
+
+# Local database and test logins
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Backups made while building
+_backup-*/
+
+# Build output and dependencies
+dist/
+node_modules/
+.vercel/
+
+# Editor and OS clutter
+.DS_Store
+Thumbs.db
+*.log

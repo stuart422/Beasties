@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-motion="full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFF8F0">
+<title>Albums · Beasties</title>
+<!-- One album page for every event: album.html?event=<id>. With no event it lists all albums. -->
+<script>
+  (function () {
+    var d = document.documentElement, saved = null;
+    try { saved = localStorage.getItem('beasties-motion'); } catch (e) {}
+    var reduce = saved ? saved === 'reduced' : matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.motion = reduce ? 'reduced' : 'full';
+  })();
+</script>
+<script type="module" src="/src/album.js"></script>
+</head>
+<body>
+
+<div id="chrome"></div>
+
+<main id="main">
+
+  <!-- One event's album -->
+  <div id="albumView" hidden>
+    <section class="album-head">
+      <div class="wrap album-head__in">
+        <a class="back-link" href="album.html">All albums</a>
+        <h1 class="album-title" id="albumTitle"></h1>
+        <p class="album-meta" id="albumMeta"></p>
+        <div class="cap-block cap-block--album" id="albumCap"></div>
+        <button class="btn btn--plum" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="days" id="days" role="group" aria-label="Show photos by day"></div>
+      <p class="hint" id="hint" aria-live="polite"></p>
+      <ul class="wall" id="wall" aria-label="Photos"></ul>
+
+      <div class="album-empty" id="empty" hidden>
+        <div class="empty-frame">
+          <div>
+            <p class="album-empty__title">Photos coming soon</p>
+            <p class="album-empty__note" id="emptyNote"></p>
+          </div>
+        </div>
+        <button class="btn btn--plum" type="button" id="emptyAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- All albums -->
+  <div id="indexView" hidden>
+    <section class="album-head">
+      <div class="wrap album-head__in">
+        <h1 class="album-title">All albums</h1>
+        <p class="album-meta">One album for every gathering, newest first.</p>
+        <p class="notice" id="notFound" hidden>That album was not found. Here are all the albums.</p>
+      </div>
+    </section>
+    <div class="wrap">
+      <ol class="album-rows" id="albumRows"></ol>
+    </div>
+  </div>
+</main>
+
+<div id="foot"></div>
+
+<!-- Add photos -->
+<div class="sheet" id="uploader" role="dialog" aria-modal="true" aria-labelledby="upTitle" hidden>
+  <div class="sheet__panel">
+    <div class="sheet__head">
+      <h2 class="sheet__title" id="upTitle">Add photos</h2>
+      <button class="btn btn--quiet btn--small" type="button" id="upClose">Close</button>
+    </div>
+    <p class="body-muted" id="upIntro">Choose up to 20 photos. JPG, PNG, WEBP and HEIC (iPhone) photos all work. Location data is removed from every photo.</p>
+    <label class="pick">
+      <input type="file" id="upFiles" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple>
+      <span class="btn btn--plum"><span class="plus" aria-hidden="true"></span>Choose photos</span>
+    </label>
+    <p class="form-error" id="upError" role="alert" hidden></p>
+    <ul class="up-list" id="upList"></ul>
+    <div class="up-progress" id="upProgress" hidden>
+      <div class="up-progress__bar"><span id="upBar"></span></div>
+      <p class="up-progress__text" id="upPct" aria-live="polite"></p>
+    </div>
+    <div class="sheet__foot">
+      <button class="btn btn--plum" type="button" id="upSend" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Large photo viewer -->
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+  <div class="viewer__photo" id="vphoto">
+    <button class="viewer__arrow viewer__arrow--prev" type="button" id="vprev" aria-label="Previous photo"><span class="chev chev--left" aria-hidden="true"></span></button>
+    <div class="viewer__stage"><img id="vimg" alt=""></div>
+    <button class="viewer__arrow viewer__arrow--next" type="button" id="vnext" aria-label="Next photo"><span class="chev" aria-hidden="true"></span></button>
+  </div>
+  <aside class="viewer__side">
+    <div class="viewer__top">
+      <p class="viewer__count" id="vcount"></p>
+      <button class="btn btn--quiet btn--small" type="button" id="vclose">Close</button>
+    </div>
+    <div class="cap-block cap-block--viewer" id="vcap"></div>
+    <div class="viewer__meta">
+      <p id="vmeta"></p>
+      <label class="day-set" id="vdayWrap" hidden>
+        <span>Day</span>
+        <select class="field__input field__input--select" id="vday"></select>
+      </label>
+    </div>
+    <div class="viewer__nav">
+      <button class="btn btn--quiet" type="button" id="vback">Previous</button>
+      <button class="btn btn--quiet" type="button" id="vfwd">Next</button>
+    </div>
+    <a class="text-link viewer__download" id="vdownload" href="#" download><span>Download</span></a>
+
+    <section class="comments" aria-labelledby="cTitle">
+      <div class="comments__head">
+        <h2 class="comments__title" id="cTitle">Comments</h2>
+        <label class="close-switch" id="cCloseWrap" hidden>
+          <input type="checkbox" id="cClose"> Close comments
+        </label>
+      </div>
+      <ul class="comments__list" id="cList"></ul>
+      <p class="comments__closed" id="cClosed" hidden>Comments are closed on this photo.</p>
+      <form class="comments__form" id="cForm">
+        <label class="sr" for="cBody">Write a comment</label>
+        <textarea class="cap-input" id="cBody" rows="2" maxlength="280" placeholder="Write a short comment" aria-describedby="cCount"></textarea>
+        <div class="cap-foot">
+          <p class="cap-count" id="cCount">0 / 280</p>
+          <button class="btn btn--plum btn--small" type="submit">Post comment</button>
+        </div>
+      </form>
+    </section>
+  </aside>
+</div>
+
+</body>
+</html>

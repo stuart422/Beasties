@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-motion="full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFF8F0">
+<title>Events · Beasties (prototype)</title>
+<script>
+  (function () {
+    var d = document.documentElement, saved = null;
+    try { saved = localStorage.getItem('beasties-motion'); } catch (e) {}
+    var reduce = saved ? saved === 'reduced' : matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.motion = reduce ? 'reduced' : 'full';
+  })();
+</script>
+<script type="module" src="/src/events-page.js"></script>
+</head>
+<body>
+
+<div id="chrome"></div>
+
+<main id="main">
+  <section class="album-head">
+    <div class="wrap album-head__in">
+      <h1 class="album-title">Events</h1>
+    </div>
+  </section>
+
+  <section class="next-event" aria-labelledby="nextH">
+    <div class="wrap next-event__in" data-reveal>
+      <p class="gathering__kicker">Next gathering</p>
+      <h2 id="nextH" class="next-event__title"></h2>
+      <p class="next-event__when" id="nextWhen"></p>
+      <p class="next-event__place" id="nextPlace"></p>
+      <div class="next-event__row">
+        <p class="gathering__count" id="countdown" hidden></p>
+        <a class="btn btn--gold" id="nextAlbum" href="#">Event album</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="past" aria-labelledby="pastH">
+    <div class="wrap">
+      <h2 id="pastH" class="h2" data-reveal>Past events</h2>
+      <p class="body-muted past__intro" data-reveal>Each one has its own album, newest first.</p>
+      <ol class="album-rows" id="pastRows"></ol>
+    </div>
+  </section>
+</main>
+
+<div id="foot"></div>
+
+</body>
+</html>
