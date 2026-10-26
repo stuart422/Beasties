@@ -1,8 +1,8 @@
 # Private photos: never in git. On Vercel they live in private Blob storage.
 photos/
 
-# Local database and test logins
-data/
+# Local database and test logins (root data folder only)
+/data/
 *.db
 *.db-journal
 *.db-wal
