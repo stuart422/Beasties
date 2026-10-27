@@ -24,6 +24,10 @@ export async function api(path, { method = 'GET', body } = {}) {
     location.href = `/signin.html?next=${encodeURIComponent(location.pathname + location.search)}`;
     throw new ApiError('Please sign in.', 401);
   }
+  if (res.status === 403 && data.mustChangePassword) {
+    location.href = '/set-password.html';
+    throw new ApiError(data.error, 403);
+  }
   if (res.status >= 500) throw new ApiError(SERVER_PROBLEM, res.status);
   if (!res.ok) throw new ApiError(data.error || 'Something went wrong. Please try again.', res.status);
   return data;

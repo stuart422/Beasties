@@ -64,6 +64,32 @@ export async function tx(fn) {
   }));
 }
 
+/* ---------- Backup point: a full copy of every table, made just before new migrations ---------- */
+
+// Copies each table into its own schema, e.g. backup_20261027_1830, inside the same database.
+// To restore a table: TRUNCATE it and INSERT INTO public.x SELECT * FROM backup_....x.
+// Sessions and sign-in counters are not copied. Only the three newest backups are kept.
+export async function backupBeforeMigration() {
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+  const schema = `backup_${stamp.slice(0, 8)}_${stamp.slice(8)}`;
+  const tables = (await query(`SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      AND table_name NOT IN ('sessions', 'login_attempts') ORDER BY table_name`)).map((r) => r.table_name);
+  let rows = 0;
+  await tx(async (t) => {
+    await t.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+    for (const name of tables) {
+      await t.query(`CREATE TABLE ${schema}.${name} AS TABLE public.${name}`);
+      rows += (await t.one(`SELECT COUNT(*)::int AS n FROM ${schema}.${name}`)).n;
+    }
+  });
+  const old = (await query(`SELECT schema_name FROM information_schema.schemata
+    WHERE schema_name LIKE 'backup\\_%' ORDER BY schema_name DESC OFFSET 3`)).map((r) => r.schema_name);
+  for (const s of old) await query(`DROP SCHEMA ${s} CASCADE`);
+  console.log(`[db] Backup point ${new Date().toISOString()}: schema ${schema}, ${tables.length} tables, ${rows} rows.`);
+  return { schema, tables: tables.length, rows };
+}
+
 /* ---------- Migrations: server/migrations/NNN_name.sql, applied once each, in order ---------- */
 
 export async function migrate() {
@@ -72,6 +98,7 @@ export async function migrate() {
   const dir = resolve(import.meta.dirname, 'migrations');
   const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
   const applied = [];
+  if (done.size && files.some((f) => !done.has(f))) await backupBeforeMigration();
   for (const file of files) {
     if (done.has(file)) continue;
     const sql = readFileSync(resolve(dir, file), 'utf8');

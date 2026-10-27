@@ -59,8 +59,9 @@ async function seedAlbums() {
         !!e.upcoming, e.empty_note ?? null, JSON.stringify(e.days || [])]);
     }
     for (const p of approvedPhotos()) {
-      await t.query(`INSERT INTO photos (event_id, file, thumb, width, height, day, caption, source)
-        VALUES ('fall-2026', $1, $2, $3, $4, $5, $6, $7)`, [p.file, p.thumb, p.w, p.h, p.day, p.caption, p.source]);
+      await t.query(`INSERT INTO photos (event_id, file, thumb, width, height, day, caption, source, sort_order)
+        VALUES ('fall-2026', $1, $2, $3, $4, $5, $6, $7,
+          (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos WHERE event_id = 'fall-2026'))`, [p.file, p.thumb, p.w, p.h, p.day, p.caption, p.source]);
     }
   });
   return true;

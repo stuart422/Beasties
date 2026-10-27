@@ -20,7 +20,7 @@ function nextPage() {
 // Already signed in: skip the cover.
 try {
   const { user } = await api('/me');
-  if (user) { location.replace(nextPage()); await new Promise(() => {}); }
+  if (user) { location.replace(user.mustChangePassword ? '/set-password.html' : nextPage()); await new Promise(() => {}); }
 } catch { /* the form below shows any problem when it is used */ }
 
 /* ---------- Entrance: the title rises, the prints are dealt, the card lands ---------- */
@@ -107,9 +107,10 @@ form.addEventListener('submit', async (e) => {
   submit.classList.add('is-busy');
   label.textContent = 'Signing in…';
   try {
-    await api('/login', { method: 'POST', body: { email, password } });
+    const { user } = await api('/login', { method: 'POST', body: { email, password } });
     label.textContent = 'Welcome back';
-    location.href = nextPage();
+    // a temporary password must be replaced first
+    location.href = user?.mustChangePassword ? '/set-password.html' : nextPage();
   } catch (err) {
     // Wrong password (401) and too many tries (429) come with their own clear message.
     // Anything else is a problem on the site, not with the password.

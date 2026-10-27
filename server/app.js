@@ -25,6 +25,7 @@ export function createApp() {
   app.get('/photos/*path', loadUser, async (req, res, next) => {
     try {
       if (!req.user) return res.status(401).end();
+      if (req.user.must_change_password) return res.status(403).end(); // choose a password first
       const key = [].concat(req.params.path).join('/');
       if (key.startsWith('incoming/')) return res.status(404).end();
       const f = await storage.open(key);

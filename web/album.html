@@ -31,11 +31,23 @@
         <h1 class="album-title" id="albumTitle"></h1>
         <p class="album-meta" id="albumMeta"></p>
         <div class="cap-block cap-block--album" id="albumCap"></div>
-        <button class="btn btn--forest" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+        <div class="album-actions">
+          <button class="btn btn--forest" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+          <button class="btn btn--quiet" type="button" id="arrangeBtn" hidden>Arrange photos</button>
+        </div>
       </div>
     </section>
 
     <div class="wrap">
+      <!-- Arrange mode (owner and admins): every move saves straight away -->
+      <div class="arrange-bar" id="arrangeBar" hidden>
+        <p class="arrange-bar__text"><b>Arranging photos.</b> <span class="arrange-bar__more">Each move is saved straight away and everyone sees the new order. All days are shown while you arrange.</span></p>
+        <div class="arrange-bar__actions">
+          <button class="btn btn--quiet btn--small" type="button" id="undoOrder">Undo last move</button>
+          <button class="btn btn--forest btn--small" type="button" id="arrangeDone">Done</button>
+        </div>
+        <p class="sr" id="arrangeStatus" aria-live="polite"></p>
+      </div>
       <div class="days" id="days" role="group" aria-label="Show photos by day"></div>
       <p class="hint" id="hint" aria-live="polite"></p>
       <ul class="wall" id="wall" aria-label="Photos"></ul>

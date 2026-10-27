@@ -32,8 +32,19 @@ function setCookie(res, token, maxAgeSeconds) {
     `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}${PRODUCTION ? '; Secure' : ''}`);
 }
 
+export const MIN_PASSWORD = 10;
+
 export function publicUser(u) {
-  return u ? { id: u.id, name: u.name, email: u.email, role: u.role } : null;
+  return u ? { id: u.id, name: u.name, email: u.email, role: u.role, mustChangePassword: !!u.must_change_password } : null;
+}
+
+// While someone still has a temporary password, only these API calls work for them.
+const FIRST_SIGN_IN_ALLOWED = new Set(['/me', '/logout', '/login', '/me/first-password']);
+export function requireOwnPassword(req, res, next) {
+  if (req.user?.must_change_password && !FIRST_SIGN_IN_ALLOWED.has(req.path)) {
+    return res.status(403).json({ error: 'Please choose your own password first.', mustChangePassword: true });
+  }
+  next();
 }
 
 // Attach req.user when the session cookie is valid.
@@ -116,9 +127,20 @@ export async function changePassword(req, res) {
   const current = String(req.body?.current || '');
   const next = String(req.body?.next || '');
   if (!(await bcrypt.compare(current, req.user.password_hash))) return res.status(400).json({ error: 'Your current password is not right.' });
-  if (next.length < 10 || next.length > 200) return res.status(400).json({ error: 'Use at least 10 characters for the new password.' });
+  if (next.length < MIN_PASSWORD || next.length > 200) return res.status(400).json({ error: `Use at least ${MIN_PASSWORD} characters for the new password.` });
   await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(next, 12), req.user.id]);
   // sign out every other session of this person
   await query('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [req.user.id, tokenHash(readCookie(req, COOKIE) || '')]);
   res.json({ ok: true });
+}
+
+// First sign-in with a temporary password: the member chooses their own.
+export async function setFirstPassword(req, res) {
+  if (!req.user.must_change_password) return res.status(400).json({ error: 'Your password is already set. Use My profile to change it.' });
+  const next = String(req.body?.next || '');
+  if (next.length < MIN_PASSWORD || next.length > 200) return res.status(400).json({ error: `Use at least ${MIN_PASSWORD} characters for your new password.` });
+  if (await bcrypt.compare(next, req.user.password_hash)) return res.status(400).json({ error: 'Please choose a new password, not the temporary one.' });
+  await query('UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2', [await bcrypt.hash(next, 12), req.user.id]);
+  await query('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [req.user.id, tokenHash(readCookie(req, COOKIE) || '')]);
+  res.json({ user: publicUser({ ...req.user, must_change_password: false }) });
 }

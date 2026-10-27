@@ -27,6 +27,10 @@ export async function initChrome(page) {
     location.href = `/signin.html?next=${encodeURIComponent(location.pathname + location.search)}`;
     return new Promise(() => {});
   }
+  if (user?.mustChangePassword) {
+    location.replace('/set-password.html');
+    return new Promise(() => {});
+  }
 
   const top = document.getElementById('chrome');
   top.innerHTML = `
@@ -47,7 +51,7 @@ export async function initChrome(page) {
             <a class="menu__item" href="sightings.html">Random Beastie Sightings</a>
             <a class="menu__item" href="my-photos.html">My photos</a>
             <a class="menu__item" href="profile.html">My profile</a>
-            ${user.role === 'owner' ? '<a class="menu__item" href="admin.html">Members and admins</a>' : ''}
+            ${user.role === 'owner' || user.role === 'admin' ? '<a class="menu__item" href="admin.html">Members</a>' : ''}
             <hr>
             ${MOTION_TOGGLE}
             <hr>

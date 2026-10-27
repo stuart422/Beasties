@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#FBF6EC">
-<title>Members and admins · Beasties</title>
+<title>Members · Beasties</title>
 <script>
   (function () {
     var d = document.documentElement, saved = null;
@@ -23,11 +23,60 @@
 <main id="main">
   <section class="album-head">
     <div class="wrap album-head__in">
-      <h1 class="album-title">Members and admins</h1>
+      <h1 class="album-title">Members</h1>
       <p class="album-meta" id="intro"></p>
     </div>
   </section>
-  <div class="wrap account" id="content"></div>
+
+  <div class="wrap admin">
+    <!-- Add a member: the site never sends email; the owner passes the login on himself -->
+    <section class="panel" aria-labelledby="addH">
+      <h2 class="panel__title" id="addH">Add a member</h2>
+      <form class="addform" id="addForm" novalidate>
+        <label class="field">
+          <span class="field__label">Full name</span>
+          <input class="field__input" name="name" autocomplete="off" maxlength="60" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input class="field__input" name="email" type="email" inputmode="email" autocapitalize="off" spellcheck="false" autocomplete="off" maxlength="200" required>
+        </label>
+        <fieldset class="rolepick" id="rolePick" hidden>
+          <legend class="field__label">Role</legend>
+          <label class="rolepick__opt"><input type="radio" name="role" value="member" checked> <span><b>Member</b> Sees and adds photos, captions and comments.</span></label>
+          <label class="rolepick__opt"><input type="radio" name="role" value="admin"> <span><b>Admin</b> Also edits any caption, arranges photos and adds members.</span></label>
+        </fieldset>
+        <p class="hint" id="roleNote" hidden>New people join as members. Only the owner can add admins.</p>
+        <p class="form-error" id="addError" role="alert" hidden></p>
+        <button class="btn btn--forest" type="submit" id="addBtn"><span class="plus" aria-hidden="true"></span>Add member</button>
+      </form>
+    </section>
+
+    <!-- The one-time login, shown after adding a member or resetting a password -->
+    <section class="logincard" id="loginCard" tabindex="-1" aria-labelledby="loginH" hidden>
+      <h2 class="logincard__title" id="loginH"></h2>
+      <dl class="logincard__rows">
+        <div><dt>Website</dt><dd id="lcSite"></dd></div>
+        <div><dt>Email</dt><dd id="lcEmail"></dd></div>
+        <div><dt>Temporary password</dt><dd class="logincard__pw" id="lcPw"></dd></div>
+      </dl>
+      <div class="logincard__actions">
+        <button class="btn btn--forest" type="button" id="lcCopy">Copy login details</button>
+        <button class="btn btn--quiet" type="button" id="lcDone">Done</button>
+      </div>
+      <ol class="logincard__steps">
+        <li>Send these details to <span class="js-who"></span> yourself, by text or in person. The site does not send any email.</li>
+        <li>They sign in with this email and temporary password.</li>
+        <li>The site then asks them to choose their own password.</li>
+      </ol>
+      <p class="logincard__warn">This password is shown only once. If it gets lost, use Reset password.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="listH">
+      <h2 class="panel__title" id="listH">Everyone</h2>
+      <ul class="people" id="people"></ul>
+    </section>
+  </div>
 </main>
 
 <div id="foot"></div>

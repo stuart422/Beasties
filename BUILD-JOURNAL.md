@@ -1,7 +1,57 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (green palette and welcome story: LIVE).
+Last updated: 10-27-2026 (Add member + Arrange photos).
+
+## Add member + Arrange photos (10-27-2026)
+
+### 1. Members page (Account menu > Members), owner and admins
+- **Add a member:** full name, email, and role (only the owner sees "Admin").
+- **One-time login card:** the site makes a temporary password (like `K7MP-X9QA-RTW4`, no look-alike characters). It's shown once, with a **Copy login details** button and 3 plain steps. **The site never sends email.**
+- **First sign-in:** the member must choose their own password, at least 10 characters, and not the temporary one. Until then every page, the API and the photos are blocked for them.
+- **Everyone list:** name, email, role, date added, and "Has not chosen a password yet".
+  - **Reset password:** a new temporary password, and the person is signed out everywhere.
+  - **Make admin / Make member:** owner only.
+  - **Remove:** a red second step, "Yes, remove Pat". Their photos and comments stay.
+- **Rules:**
+  - The owner can never be removed or demoted, and nobody can remove themself.
+  - Admins can manage members only, not admins.
+  - Email is checked and duplicates are blocked (any upper or lower case).
+  - At most 30 adds or resets per hour per person.
+- Big text, 52px+ buttons, and one column on phones.
+
+### 2. Arrange photos (inside every album), owner and admins
+- **Arrange photos** button, then each photo shows **Move up**, **Move down**, and **Move to position** (type a number).
+- **Saving:** every move is saved straight away. Everyone sees the new order, the photo viewer and Home follow it, and day filters still work.
+- **Undo last move:** the last 30 arrangements are kept per album.
+- Members and uploaders can't reorder (the server refuses with 403).
+- **New uploads go to the end.**
+
+### Database (migration `003_members_and_order.sql`)
+- `users.must_change_password` (default false).
+- `photos.sort_order` is set to `id`, so **every existing photo keeps its exact order**. There's a safe default for the minute before the new code is live.
+- New table `photo_order_history` for Undo.
+
+### Backup before the migration
+- No Neon API key is available here, and a Neon branch needs your Neon login.
+- So the build now **copies every table into a dated backup schema** (`backup_YYYYMMDD_HHMM`) right before any new migration. It keeps the newest 3.
+- The build log prints the exact time, which can also be used with Neon's own point-in-time restore.
+- **To restore one table:** `TRUNCATE x; INSERT INTO public.x SELECT * FROM backup_….x;`
+
+### 43 vs 44 photos (checked, nothing changed)
+- **The 44 in the handoff are all approved.** The DO NOT PUBLISH DJI photo was never one of them.
+- **Live has 43 because of edits on the site:**
+  - Photos **31 and 32** (untitled, "Day not set") were deleted. Their files are gone from storage, but local copies still exist.
+  - Stuart **uploaded 1 new photo** (Saturday, now position 43).
+  - That makes 44 − 2 + 1 = 43.
+
+### Tested locally (all pass)
+- **Feature test, 48 checks:** permissions, adding, duplicates, bad email, forced password change, the block before it, reset, roles, removal, the rate limit, every kind of move, Undo back to the exact original, new upload at the end, signed-out 401s.
+- **Click-through in a real browser, 26 checks, phone 390 and desktop 1440:**
+  - Owner adds Pat, sees the login card. Pat signs in, is sent to choose a password, a short one is refused, then Home.
+  - Pat sees no Arrange or Members.
+  - Owner: Move down, Move to 1, Undo ×2 back to the original, Done; day filter and viewer work.
+- **Full regression test:** all pass (captions and Undo, comments, uploads, sightings, cookies, 401s).
 
 ## Green palette + welcome story (10-27-2026): LIVE
 

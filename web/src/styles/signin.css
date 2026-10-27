@@ -190,3 +190,9 @@
 }
 
 [data-motion="reduced"] .cover *, [data-motion="reduced"] .cover *::before, [data-motion="reduced"] .cover *::after { animation: none !important; transition: none !important; }
+
+/* First sign-in page extras */
+.cfield__count { font-size: 16px; font-weight: 600; color: var(--muted); }
+.cfield__count.is-ok { color: #1F6B3A; }
+.card__link { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--forest); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; min-height: 44px; }
+.cover__title--sm { font-size: clamp(54px, 6vw, 108px); }

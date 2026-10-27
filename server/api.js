@@ -3,8 +3,11 @@
 import express from 'express';
 import multer from 'multer';
 import { randomBytes } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { query, one, tx } from './db.js';
-import { loadUser, requireUser, requireRole, isAdmin, publicUser, login, logout, changePassword } from './auth.js';
+import {
+  loadUser, requireUser, requireRole, requireOwnPassword, isAdmin, publicUser, login, logout, changePassword, setFirstPassword,
+} from './auth.js';
 import { processImage, MAX_FILE_BYTES, MAX_FILES } from './images.js';
 import * as storage from './storage.js';
 
@@ -33,6 +36,7 @@ api.use((req, res, next) => {
 });
 api.use(express.json({ limit: '32kb' }));
 api.use(loadUser);
+api.use(requireOwnPassword);
 
 /* =====================================================================
    Account
@@ -49,6 +53,7 @@ api.patch('/me', requireUser, async (req, res) => {
   res.json({ user: publicUser({ ...req.user, name }) });
 });
 api.post('/me/password', requireUser, changePassword);
+api.post('/me/first-password', requireUser, setFirstPassword);
 
 /* =====================================================================
    Albums
@@ -67,12 +72,14 @@ async function eventOut(e, user) {
     days: e.days, caption: e.caption,
     canEditCaption: isAdmin(user),
     canUndoCaption: isAdmin(user) && (await hasHistory('album', e.id)),
+    canArrange: isAdmin(user),
+    canUndoOrder: isAdmin(user) && !!(await one('SELECT 1 FROM photo_order_history WHERE event_id = $1 LIMIT 1', [e.id])),
   };
 }
 
 api.get('/events', requireUser, async (req, res) => {
   const rows = await query(`SELECT e.*, COUNT(p.id)::int AS photo_count,
-      (SELECT thumb FROM photos WHERE event_id = e.id ORDER BY id LIMIT 1) AS cover
+      (SELECT thumb FROM photos WHERE event_id = e.id ORDER BY sort_order, id LIMIT 1) AS cover
     FROM events e LEFT JOIN photos p ON p.event_id = e.id GROUP BY e.id ORDER BY e.sort`);
   const events = [];
   for (const e of rows) events.push({ ...(await eventOut(e, req.user)), photoCount: e.photo_count, cover: e.cover ? `/photos/${e.cover}` : null });
@@ -102,8 +109,63 @@ const freshPhoto = async (id, user) => photoOut(await one(`${PHOTO_SELECT} WHERE
 api.get('/events/:id', requireUser, async (req, res) => {
   const e = await eventRow(req.params.id);
   if (!e) return fail(res, 404, 'That album was not found.');
-  const photos = await query(`${PHOTO_SELECT} WHERE p.event_id = $1 ORDER BY p.id`, [e.id]);
-  res.json({ event: await eventOut(e, req.user), photos: photos.map((p) => photoOut(p, req.user)), canUpload: true });
+  res.json(await albumOut(e, req.user));
+});
+
+async function albumOut(e, user) {
+  const photos = await query(`${PHOTO_SELECT} WHERE p.event_id = $1 ORDER BY p.sort_order, p.id`, [e.id]);
+  return { event: await eventOut(e, user), photos: photos.map((p) => photoOut(p, user)), canUpload: true };
+}
+
+/* =====================================================================
+   Photo order (owner and admins). Every move saves the arrangement before it,
+   so "Undo last move" can put it back. Members and uploaders cannot reorder.
+   ===================================================================== */
+
+const ORDER_HISTORY_KEEP = 30;
+const orderedIds = async (t, eventId) => (await t.query('SELECT id FROM photos WHERE event_id = $1 ORDER BY sort_order, id', [eventId])).map((r) => r.id);
+const writeOrder = (t, ids) => t.query(`UPDATE photos AS p SET sort_order = o.ord
+  FROM unnest($1::int[]) WITH ORDINALITY AS o(id, ord) WHERE p.id = o.id`, [ids]);
+
+api.post('/events/:id/order', requireRole('admin'), async (req, res) => {
+  const e = await eventRow(req.params.id);
+  if (!e) return fail(res, 404, 'That album was not found.');
+  const photoId = Number(req.body?.photoId);
+  const position = Number(req.body?.position);
+  if (!Number.isInteger(position)) return fail(res, 400, 'Please type a position number.');
+  const moved = await tx(async (t) => {
+    const ids = await orderedIds(t, e.id);
+    const from = ids.indexOf(photoId);
+    if (from < 0) return 'missing';
+    const to = Math.min(Math.max(position, 1), ids.length) - 1;
+    if (to === from) return 'same';
+    await t.query('INSERT INTO photo_order_history (event_id, photo_ids, user_id) VALUES ($1, $2, $3)', [e.id, JSON.stringify(ids), req.user.id]);
+    await t.query(`DELETE FROM photo_order_history WHERE event_id = $1 AND id NOT IN
+      (SELECT id FROM photo_order_history WHERE event_id = $1 ORDER BY id DESC LIMIT ${ORDER_HISTORY_KEEP})`, [e.id]);
+    ids.splice(from, 1);
+    ids.splice(to, 0, photoId);
+    await writeOrder(t, ids);
+    return to + 1;
+  });
+  if (moved === 'missing') return fail(res, 404, 'That photo is not in this album.');
+  res.json({ ...(await albumOut(e, req.user)), position: moved === 'same' ? position : moved });
+});
+
+api.post('/events/:id/order/undo', requireRole('admin'), async (req, res) => {
+  const e = await eventRow(req.params.id);
+  if (!e) return fail(res, 404, 'That album was not found.');
+  const undone = await tx(async (t) => {
+    const last = await t.one('SELECT * FROM photo_order_history WHERE event_id = $1 ORDER BY id DESC LIMIT 1', [e.id]);
+    if (!last) return false;
+    // Photos added since keep their place after the restored ones; deleted ones are skipped.
+    const now = await orderedIds(t, e.id);
+    const before = (typeof last.photo_ids === 'string' ? JSON.parse(last.photo_ids) : last.photo_ids).filter((id) => now.includes(id));
+    await writeOrder(t, [...before, ...now.filter((id) => !before.includes(id))]);
+    await t.query('DELETE FROM photo_order_history WHERE id = $1', [last.id]);
+    return true;
+  });
+  if (!undone) return fail(res, 400, 'There is no earlier arrangement to go back to.');
+  res.json(await albumOut(e, req.user));
 });
 
 api.get('/my/photos', requireUser, async (req, res) => {
@@ -213,8 +275,9 @@ async function addPhoto(e, buffer, caption, user, taken) {
   await storage.put(file, img.large);
   await storage.put(thumb, img.small);
   const day = img.weekday && e.days.includes(img.weekday) ? img.weekday : DAY_NOT_SET;
-  const row = await one(`INSERT INTO photos (event_id, file, thumb, width, height, day, caption, uploader_id, source)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Uploaded') RETURNING id`,
+  // new uploads go to the end of the album
+  const row = await one(`INSERT INTO photos (event_id, file, thumb, width, height, day, caption, uploader_id, source, sort_order)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Uploaded', (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos WHERE event_id = $1)) RETURNING id`,
   [e.id, file, thumb, img.width, img.height, day, text(caption, CAPTION_MAX), user.id]);
   return freshPhoto(row.id, user);
 }
@@ -433,21 +496,101 @@ api.delete('/sightings/:id', requireUser, async (req, res) => {
 });
 
 /* =====================================================================
-   Admin (owner only): members and the admin role. No contact details.
+   Members (owner and admins). The site never sends email: a new member gets a one-time
+   temporary password, shown once, and must choose their own at first sign-in.
+   Admins manage members; only the owner creates admins or changes roles.
+   The owner can never be removed or demoted.
    ===================================================================== */
 
-api.get('/admin/members', requireRole('owner'), async (req, res) => {
-  res.json({ members: await query("SELECT id, name, role FROM users ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, name") });
+// No look-alike characters (0/O, 1/I/L), upper case only: easy to read out or type.
+const TEMP_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function tempPassword() {
+  const bytes = randomBytes(12);
+  const chars = [...bytes].map((b) => TEMP_ALPHABET[b % TEMP_ALPHABET.length]).join('');
+  return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8, 12)}`;
+}
+const EMAIL_RE = /^[^\s@<>()[\],;:"]+@[^\s@<>()[\],;:"]+\.[A-Za-z]{2,}$/;
+
+// At most 30 adds or resets an hour per person, kept in the database (works on every server).
+async function adminRateLimited(user) {
+  const key = `admin:${user.id}`;
+  const row = await one(`INSERT INTO login_attempts (key, count, until) VALUES ($1, 1, now() + interval '60 minutes')
+    ON CONFLICT (key) DO UPDATE SET
+      count = CASE WHEN login_attempts.until > now() THEN login_attempts.count + 1 ELSE 1 END,
+      until = CASE WHEN login_attempts.until > now() THEN login_attempts.until ELSE now() + interval '60 minutes' END
+    RETURNING count`, [key]);
+  return row.count > 30;
+}
+
+const memberOut = (u) => ({
+  id: u.id, name: u.name, email: u.email, role: u.role, addedAt: u.created_at,
+  waitingForFirstSignIn: !!u.must_change_password,
+});
+
+// Who may act on whom: nobody touches the owner; admins act on members only; nobody removes themself.
+function mayManage(actor, target) {
+  if (target.role === 'owner') return false;
+  if (actor.role === 'owner') return true;
+  return target.role === 'member';
+}
+
+api.get('/admin/members', requireRole('admin'), async (req, res) => {
+  const rows = await query("SELECT * FROM users ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, lower(name)");
+  res.json({
+    members: rows.map((u) => ({ ...memberOut(u), canManage: mayManage(req.user, u) && u.id !== req.user.id, isMe: u.id === req.user.id })),
+    canCreateAdmins: req.user.role === 'owner',
+    canChangeRoles: req.user.role === 'owner',
+  });
+});
+
+api.post('/admin/members', requireRole('admin'), async (req, res) => {
+  const name = text(req.body?.name, 60);
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const role = req.body?.role === 'admin' ? 'admin' : 'member';
+  if (!name) return fail(res, 400, 'Please enter their full name.');
+  if (email.length > 200 || !EMAIL_RE.test(email)) return fail(res, 400, 'Please enter a valid email address, like name@example.com.');
+  if (role === 'admin' && req.user.role !== 'owner') return fail(res, 403, 'Only the owner can add admins.');
+  if (await adminRateLimited(req.user)) return fail(res, 429, 'Too many changes in a short time. Please wait an hour and try again.');
+  if (await one('SELECT 1 FROM users WHERE lower(email) = $1', [email])) return fail(res, 409, 'Someone with that email is already a member.');
+  const password = tempPassword();
+  const u = await one(`INSERT INTO users (email, name, password_hash, role, must_change_password)
+    VALUES ($1, $2, $3, $4, true) RETURNING *`, [email, name, await bcrypt.hash(password, 12), role]);
+  res.json({ member: memberOut(u), tempPassword: password });
+});
+
+async function targetFor(req, res) {
+  const u = await one('SELECT * FROM users WHERE id = $1', [Number(req.params.id) || 0]);
+  if (!u) { fail(res, 404, 'That member was not found.'); return null; }
+  if (u.id === req.user.id) { fail(res, 400, 'You cannot do that to your own account here. Use My profile instead.'); return null; }
+  if (!mayManage(req.user, u)) { fail(res, 403, u.role === 'owner' ? 'The owner account cannot be changed here.' : 'Only the owner can change an admin.'); return null; }
+  return u;
+}
+
+api.post('/admin/members/:id/reset-password', requireRole('admin'), async (req, res) => {
+  const u = await targetFor(req, res);
+  if (!u) return;
+  if (await adminRateLimited(req.user)) return fail(res, 429, 'Too many changes in a short time. Please wait an hour and try again.');
+  const password = tempPassword();
+  await query('UPDATE users SET password_hash = $1, must_change_password = true WHERE id = $2', [await bcrypt.hash(password, 12), u.id]);
+  await query('DELETE FROM sessions WHERE user_id = $1', [u.id]); // signs them out everywhere
+  res.json({ member: memberOut({ ...u, must_change_password: true }), tempPassword: password });
 });
 
 api.patch('/admin/members/:id/role', requireRole('owner'), async (req, res) => {
-  const u = await one('SELECT * FROM users WHERE id = $1', [Number(req.params.id) || 0]);
-  if (!u) return fail(res, 404, 'That member was not found.');
-  if (u.role === 'owner') return fail(res, 400, 'The owner role cannot be changed here.');
+  const u = await targetFor(req, res);
+  if (!u) return;
   const role = req.body?.role;
   if (!['admin', 'member'].includes(role)) return fail(res, 400, 'Choose admin or member.');
   await query('UPDATE users SET role = $1 WHERE id = $2', [role, u.id]);
-  res.json({ member: { id: u.id, name: u.name, role } });
+  res.json({ member: memberOut({ ...u, role }) });
+});
+
+api.delete('/admin/members/:id', requireRole('admin'), async (req, res) => {
+  const u = await targetFor(req, res);
+  if (!u) return;
+  // Their photos, sightings and comments stay on the site (shown without a name).
+  await query('DELETE FROM users WHERE id = $1', [u.id]);
+  res.json({ removed: u.id });
 });
 
 api.use((req, res) => fail(res, 404, 'Not found.'));

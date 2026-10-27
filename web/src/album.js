@@ -74,6 +74,7 @@ async function showAlbum(id) {
   const wall = document.getElementById('wall');
   let day = ALL;
   let list = photos;
+  let arranging = false; // owner and admins: Move up / Move down / Move to position
 
   async function reload() {
     ({ event, photos } = await api(`/events/${encodeURIComponent(id)}`));
@@ -100,10 +101,14 @@ async function showAlbum(id) {
     daysEl.hidden = empty;
     wall.hidden = empty;
     document.getElementById('hint').hidden = empty;
+    document.getElementById('arrangeBtn').hidden = !event.canArrange || photos.length < 2 || arranging;
+    document.getElementById('arrangeBar').hidden = !arranging;
+    document.getElementById('undoOrder').disabled = !event.canUndoOrder;
   }
 
   function renderDays() {
     daysEl.innerHTML = '';
+    if (arranging) { daysEl.hidden = true; return; }
     if (!photos.length) return;
     const names = [ALL, ...event.days, DAY_NOT_SET].filter((d, i, a) => a.indexOf(d) === i)
       .filter((d) => d === ALL || photos.some((p) => p.day === d));
@@ -126,14 +131,15 @@ async function showAlbum(id) {
   /* ---------- Photo wall ---------- */
 
   function renderWall() {
-    list = day === ALL ? photos : photos.filter((p) => p.day === day);
-    document.getElementById('hint').textContent = day === DAY_NOT_SET
+    list = day === ALL || arranging ? photos : photos.filter((p) => p.day === day);
+    document.getElementById('hint').textContent = arranging ? '' : day === DAY_NOT_SET
       ? (me.role === 'member' ? 'These photos have no date in their files yet.' : 'These photos have no date in their files. Open one to set its day.')
       : '';
     wall.innerHTML = '';
     list.forEach((p, k) => {
       const li = document.createElement('li');
-      li.className = 'tile';
+      li.className = arranging ? 'tile tile--arrange' : 'tile';
+      li.dataset.id = p.id;
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'tile__photo';
@@ -147,9 +153,12 @@ async function showAlbum(id) {
       img.decoding = 'async';
       frame.append(img);
       open.append(frame);
-      open.addEventListener('click', () => openViewer(k, open));
+      open.addEventListener('click', () => { if (!arranging) openViewer(k, open); });
+      if (arranging) { open.tabIndex = -1; open.setAttribute('aria-hidden', 'true'); }
       li.append(open);
-      if (p.caption) {
+      if (arranging) {
+        li.append(arrangeControls(p, k));
+      } else if (p.caption) {
         const c = document.createElement('p');
         c.className = 'tile__cap';
         c.textContent = p.caption;
@@ -171,6 +180,81 @@ async function showAlbum(id) {
     renderDays();
     renderWall();
   }
+
+  /* ---------- Arrange photos (owner and admins) ---------- */
+
+  const status = document.getElementById('arrangeStatus');
+
+  function arrangeControls(p, k) {
+    const n = photos.length;
+    const box = document.createElement('div');
+    box.className = 'arrange';
+    box.innerHTML = `
+      <p class="arrange__pos">Photo <b>${k + 1}</b> of ${n}</p>
+      <div class="arrange__row">
+        <button class="arrange__btn" type="button" data-move="up"${k === 0 ? ' disabled' : ''}><span aria-hidden="true">&uarr;</span> Move up</button>
+        <button class="arrange__btn" type="button" data-move="down"${k === n - 1 ? ' disabled' : ''}><span aria-hidden="true">&darr;</span> Move down</button>
+      </div>
+      <form class="arrange__to">
+        <label class="arrange__label" for="to-${p.id}">Move to position</label>
+        <div class="arrange__row">
+          <input class="arrange__num" id="to-${p.id}" type="number" inputmode="numeric" min="1" max="${n}" placeholder="1 to ${n}">
+          <button class="arrange__btn arrange__btn--go" type="submit" data-move="to">Move</button>
+        </div>
+      </form>`;
+    box.querySelector('[data-move="up"]').addEventListener('click', () => move(p, k, 'up'));
+    box.querySelector('[data-move="down"]').addEventListener('click', () => move(p, k + 2, 'down'));
+    box.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const to = Number(box.querySelector('input').value);
+      if (!Number.isInteger(to) || to < 1 || to > n) { notify('Type a position', `Please type a number from 1 to ${n}.`); return; }
+      move(p, to, 'to');
+    });
+    return box;
+  }
+
+  let moving = false;
+  async function move(p, position, control) {
+    if (moving) return;
+    moving = true;
+    try {
+      const data = await api(`/events/${encodeURIComponent(id)}/order`, { method: 'POST', body: { photoId: p.id, position } });
+      ({ event, photos } = data);
+      renderAll();
+      // keep the photo in view and the focus on the same kind of button
+      const li = wall.querySelector(`[data-id="${p.id}"]`);
+      li?.scrollIntoView({ block: 'center', behavior: isReduced() ? 'auto' : 'smooth' });
+      const again = li?.querySelector(`[data-move="${control}"]:not([disabled])`) || li?.querySelector('[data-move]:not([disabled])');
+      again?.focus({ preventScroll: true });
+      li?.classList.add('is-moved');
+      status.textContent = `Moved to position ${data.position} of ${photos.length}.`;
+    } catch (err) {
+      notify('Not moved', err.message);
+    } finally {
+      moving = false;
+    }
+  }
+
+  document.getElementById('arrangeBtn').addEventListener('click', () => {
+    arranging = true;
+    renderAll();
+    document.getElementById('arrangeBar').scrollIntoView({ block: 'start', behavior: isReduced() ? 'auto' : 'smooth' });
+    document.getElementById('arrangeDone').focus({ preventScroll: true });
+  });
+  document.getElementById('arrangeDone').addEventListener('click', () => {
+    arranging = false;
+    renderAll();
+    notify('Order saved', 'Everyone now sees the photos in this order.');
+    document.getElementById('arrangeBtn').focus();
+  });
+  document.getElementById('undoOrder').addEventListener('click', async () => {
+    try {
+      ({ event, photos } = await api(`/events/${encodeURIComponent(id)}/order/undo`, { method: 'POST' }));
+      renderAll();
+      status.textContent = 'The last move was undone.';
+      notify('Move undone', 'The photos are back in the order before your last move.');
+    } catch (err) { notify('Nothing to undo', err.message); }
+  });
 
   /* ---------- Viewer ---------- */
 
