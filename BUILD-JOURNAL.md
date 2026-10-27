@@ -1,7 +1,32 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-28-2026 (full-screen viewer, Big photos, password change).
+Last updated: 10-28-2026 (the story under each Big photo).
+
+## The story under each photo (10-28-2026), commit `3c4f1d1`, live
+
+Stuart: let the Beasties see the caption and comments with each picture, because not all 30 are at every event. He said one view is enough.
+
+### Where: Album > Big photos
+- Every big photo now has a **solid strip underneath** (never over the photo):
+  - the **caption**, larger, in the heading font;
+  - the **day** and **who shared it**;
+  - the **latest 3 comments**, with each person's name and date;
+  - a button: **Be the first to comment** / **Add a comment** / **See all N comments**.
+- The button opens that photo full screen with the **comment box ready**.
+- The strip refreshes when you close the photo, so a new comment shows at once.
+- The full-screen viewer stays photo-only, as Stuart liked it.
+
+### How it works
+- New `GET /api/events/:id/comments` returns every comment in an album in one request. Signed-out visitors get 401.
+
+### Tested (all pass)
+- **Strip test, 10 checks:** iPad member, iPhone member, desktop owner, iPad owner with View as member. Locally and on the live site.
+  - Every photo has a strip below it, with the day and shared-by line.
+  - "Be the first to comment" opens with the box ready, and the comment then shows with the name.
+  - The scroll place is kept, and deleting the comment clears the strip.
+- **Also all pass:** viewer tests, full regression and the members/arrange test.
+- **Live cleanup checked:** no test comments left, only Stuart Bambushew (owner) and Stuart Testing (member), 43 photos, order unchanged.
 
 ## Full-screen viewer + Big photos + password (10-28-2026), commit `6965d3e`, build green
 
