@@ -47,6 +47,18 @@ Stuart (iPad, landscape) wanted just the photos, filling the screen.
   - Signed-in live tests and the "Stuart Testing" account wait for the new owner password in `.env.owner.local`.
   - `.stuart-testing-login.txt` belongs to the removed account, so it no longer works.
 
+### Live, finished (10-28-2026, after the owner password was updated)
+- **"Stuart Testing"** (`sbambushew@gmail.com`, **member**) was created with the real Add member form. Its fresh one-time password is only in `.stuart-testing-login.txt` (git-ignored). It signs in and asks for a new password. I didn't use it up.
+- **Viewer + Big photos test, 12 live runs, all pass:** iPad 1279×889, iPhone 390 and desktop 1440, each as owner, admin, member and owner with View as member. Admin and member were throwaway accounts, removed afterwards.
+- **Also all pass live:** password test (10), full regression, click-through on iPad (26), My profile (7), and the members/arrange test (38, after the fix below).
+
+### Mistake made and fixed: one arrangement step was undone
+- Since yesterday, someone (most likely Stuart) used **Arrange photos** on Fall 2026.
+- My members/arrange test ended with one extra **Undo** to check that nothing was left. Yesterday there was nothing, but today it **undid that person's most recent arrangement step**.
+- Their earlier moves are still in place (photo 6, the hot cocoa photo, is at position 8). That last move can't be recovered automatically: Undo history only saves the order *before* each move.
+- **Fixed the test:** it now skips the extra Undo whenever someone else has Undo history. A rerun left the order exactly as it found it.
+- **Needs Stuart:** check the start of Fall 2026 in **Arrange photos** and redo his last move if something is out of place.
+
 ## View as member + test login + regions (10-28-2026)
 
 ### View as member (owner and admins)
