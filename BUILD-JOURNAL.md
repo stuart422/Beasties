@@ -1,7 +1,51 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-28-2026 (View as member, Stuart's test login, regions).
+Last updated: 10-28-2026 (full-screen viewer, Big photos, password change).
+
+## Full-screen viewer + Big photos + password (10-28-2026), commit `6965d3e`, build green
+
+Stuart (iPad, landscape) wanted just the photos, filling the screen.
+
+### 1. Full-screen photo viewer (everyone)
+- **The photo fills the screen, whole** (never cropped or stretched) on dark green `#0A2A1D`.
+- **Controls:** big round arrows on both sides, plus swipe, arrow keys and Escape. A "2 of 43" pill at top left, Close at top right.
+- **Details button:** opens a solid panel with caption, Edit + Undo (for those allowed), day, Download, Delete (for those allowed) and Comments.
+  - From 900px wide (iPad landscape, desktop): a side panel beside the photo.
+  - On phones: a bottom sheet.
+  - Each device remembers it; closed by default. Text never sits on the photo.
+- **Full screen button:** the browser's own full screen (`webkitRequestFullscreen` on iPad Safari). Hidden where it isn't allowed (iPhone).
+- **Also:**
+  - Next and previous photos load ahead.
+  - Your gallery scroll place is kept.
+  - Focus stays inside the viewer.
+  - Fades are off with Reduce motion.
+  - On phones, Details and Full screen are icon buttons so Close always fits.
+- **Bug fixed during testing:** on iPad the photo ran past the bottom of the screen (1009px on 889px), because the "fit inside" rule didn't apply in a grid. It's now 1079×809, the full height.
+
+### 2. Album: Grid / Big photos
+- **Toggle above the day filters**, remembered on each device.
+- **Big photos:** the large, uncropped photo, one column (two from 1000px wide), filling the screen width. The caption sits on a solid strip **under** the photo. Day filters still work, and tapping a photo opens the viewer there.
+
+### 3. Passwords
+- **Minimum is now 12 characters** (first sign-in and My profile).
+- **My profile > Change password:** current, new and "type it again" fields, a live character count, Show passwords, and plain error messages (wrong current password / too short / not the same / same as before). Other devices are signed out after a change.
+- **Bug fixed:** "Save name" on My profile never worked (`form.name` is the form's own name, not the field).
+- **Members page:** new **Edit name** button (owner and admins).
+
+### Tested locally (all pass)
+- **Viewer + Big photos test, 31–32 checks per run:** iPad 1279×889, iPhone 390 (and 360), desktop 1440, each as owner, admin, member and owner with View as member. All pass.
+  - Fills the screen, whole photo, arrows, keys and swipe, Details (side or bottom), caption Edit + Undo, comments, Escape, scroll kept, Big photos, day filter.
+- **Password test, 10 checks:** wrong, short and same are refused; after a change, other devices are signed out; old password fails, new one works.
+- **My profile page, 7 checks:** the name saves, and the messages show on the page.
+- Full regression, 48 member/arrange checks, click-through, and View as member: all pass.
+
+### Live (after deploy)
+- **New code confirmed:** viewer, Details, Full screen, Big photos and the password form are all served.
+- **Signed out:** photos (small and large), API and download all return 401.
+- **Blocked:** the owner login in `.env.owner.local` now gets 401, so the **owner password was changed**. The build log also shows **1 account**: the "Stuart Member Profile" test account (sbambushew@gmail.com) was removed.
+  - Signed-in live tests and the "Stuart Testing" account wait for the new owner password in `.env.owner.local`.
+  - `.stuart-testing-login.txt` belongs to the removed account, so it no longer works.
 
 ## View as member + test login + regions (10-28-2026)
 
