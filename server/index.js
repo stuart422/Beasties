@@ -49,7 +49,10 @@ app.use(loadUser, (req, res, next) => {
   if (!path.endsWith('.html')) return next();
   const isSignIn = path === '/signin.html';
   if (!req.user && !isSignIn) return res.redirect(`/signin.html?next=${encodeURIComponent(req.originalUrl)}`);
-  if (req.user && isSignIn) return res.redirect('/');
+  if (req.user && isSignIn) {
+    const next = String(req.query.next || '/');
+    return res.redirect(/^\/(?![/\\])/.test(next) ? next : '/');
+  }
   next();
 });
 

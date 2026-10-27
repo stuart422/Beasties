@@ -1,7 +1,36 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (clean-up and Random Beastie Sightings, live).
+Last updated: 10-27-2026 (new sign-in page).
+
+## New sign-in page (10-27-2026)
+
+### Look: "the cover of the memory book"
+- Deep plum background with warm gold and lilac light, soft film grain and a thin gold frame.
+- Big "A Family of Friends" title. A gold shimmer passes once across "Friends".
+- The form sits on an ivory print card, fanned over two blank prints.
+- **No photos:** the prints show abstract light only (handoff rule: no private photos on sign-in).
+- A giant faint "Beasties" wordmark along the bottom edge (desktop only).
+
+### Motion (off with Reduce motion or the phone setting)
+- The title rises, the prints are dealt in, then the card lands.
+- On desktop, the stack leans gently toward the mouse.
+- A wrong password gives a small shake.
+
+### Easier to use
+- A **Show / Hide** password button.
+- A **Caps Lock is on** warning.
+- No pale-blue autofill boxes.
+- Empty or wrong fields turn red, with a clear message.
+- **Already signed in?** The page skips straight to where you were going.
+- The help line is honest: "Contact the person who gave you your login." There is no reset feature yet.
+
+### Safety
+- After sign-in, the site only returns you to its own pages. `//other-site` and `/\other-site` are refused, both in the page and in the local server.
+
+### Checked
+- Desktop 1440 and phone 375: the whole form fits on the first phone screen, with no sideways scroll.
+- Empty submit, wrong password, Show/Hide, reduced motion, redirect when already signed in.
 
 ## Clean-up and Sightings (10-27-2026), commit `2ab9f6e`, live
 
