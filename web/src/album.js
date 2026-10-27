@@ -187,8 +187,58 @@ async function showAlbum(id) {
         add.addEventListener('click', () => openViewer(k, open, true));
         li.append(add);
       }
+      if (big) li.append(storyFor(p, k, open));
       wall.append(li);
     });
+    if (big) fillStories();
+  }
+
+  /* ---------- Big photos: the story under each photo (day, who shared it, comments) ---------- */
+
+  const SHOW_COMMENTS = 3;
+  let albumComments = null; // { photoId: [comments] }, loaded once and refreshed after the viewer closes
+  const shortDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+
+  function storyFor(p, k, open) {
+    const box = document.createElement('div');
+    box.className = 'tile__story';
+    box.dataset.photo = p.id;
+    const meta = document.createElement('p');
+    meta.className = 'tile__meta';
+    meta.textContent = [p.day !== DAY_NOT_SET ? p.day : null, p.uploader ? `Shared by ${p.uploader}` : null].filter(Boolean).join(' · ');
+    if (meta.textContent) box.append(meta);
+    const talk = document.createElement('ul');
+    talk.className = 'tile__talk';
+    talk.setAttribute('aria-label', 'Comments on this photo');
+    box.append(talk);
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'tile__comment';
+    more.addEventListener('click', () => openViewer(k, open, false, true));
+    box.append(more);
+    return box;
+  }
+
+  async function fillStories(reload = false) {
+    if (!albumComments || reload) {
+      try { albumComments = (await api(`/events/${encodeURIComponent(id)}/comments`)).comments; } catch { return; }
+    }
+    for (const box of wall.querySelectorAll('.tile__story')) {
+      const all = albumComments[box.dataset.photo] || [];
+      const talk = box.querySelector('.tile__talk');
+      talk.innerHTML = '';
+      for (const c of all.slice(-SHOW_COMMENTS)) {
+        const li = document.createElement('li');
+        li.innerHTML = '<p class="tile__said"><b></b> <span></span></p><p class="tile__when"></p>';
+        li.querySelector('b').textContent = c.author;
+        li.querySelector('span').textContent = c.body;
+        li.querySelector('.tile__when').textContent = shortDate.format(new Date(c.at));
+        talk.append(li);
+      }
+      talk.hidden = !all.length;
+      const btn = box.querySelector('.tile__comment');
+      btn.textContent = all.length > SHOW_COMMENTS ? `See all ${all.length} comments` : all.length ? 'Add a comment' : 'Be the first to comment';
+    }
   }
 
   function renderAll() {
@@ -368,14 +418,19 @@ async function showAlbum(id) {
     [at + 1, at - 1].forEach((j) => { const n = new Image(); n.decoding = 'async'; n.src = list[(j + list.length) % list.length].src; });
   }
 
-  function openViewer(k, from, startEditing = false) {
+  function openViewer(k, from, startEditing = false, toComments = false) {
     opener = from;
     savedScroll = window.scrollY;
-    setDetails(startEditing || detailsWanted(), false);
+    setDetails(startEditing || toComments || detailsWanted(), false);
     show(k, startEditing);
     viewer.hidden = false;
     document.documentElement.classList.add('is-locked');
-    if (!startEditing) document.getElementById('vclose').focus();
+    if (toComments) {
+      // straight to the comment box (or the comments, when they are closed)
+      const box = document.getElementById('cBody');
+      document.getElementById('cTitle').scrollIntoView({ block: 'start' });
+      if (!document.getElementById('cForm').hidden) box.focus({ preventScroll: true });
+    } else if (!startEditing) document.getElementById('vclose').focus();
   }
 
   function closeViewer() {
@@ -384,6 +439,12 @@ async function showAlbum(id) {
     document.documentElement.classList.remove('is-locked');
     window.scrollTo({ top: savedScroll, behavior: 'instant' }); // keep the gallery where it was
     opener?.focus({ preventScroll: true });
+    if (wall.classList.contains('wall--big')) {
+      // captions or comments may have changed in the viewer
+      renderWall();
+      window.scrollTo({ top: savedScroll, behavior: 'instant' });
+      fillStories(true);
+    }
   }
 
   document.getElementById('vclose').addEventListener('click', closeViewer);

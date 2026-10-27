@@ -361,6 +361,23 @@ async function commentsOut(photoId, user) {
     }));
 }
 
+// Every comment in one album at once, grouped by photo (for the Big photos view).
+api.get('/events/:id/comments', requireUser, async (req, res) => {
+  const e = await eventRow(req.params.id);
+  if (!e) return fail(res, 404, 'That album was not found.');
+  const rows = await query(`SELECT c.id, c.photo_id, c.body, c.created_at, c.user_id, u.name FROM comments c
+    JOIN photos p ON p.id = c.photo_id LEFT JOIN users u ON u.id = c.user_id
+    WHERE p.event_id = $1 ORDER BY c.id`, [e.id]);
+  const byPhoto = {};
+  for (const c of rows) {
+    (byPhoto[c.photo_id] ||= []).push({
+      id: c.id, body: c.body, author: c.name || 'Former member', at: c.created_at,
+      mine: c.user_id === req.user.id, canDelete: isAdmin(req.user) || c.user_id === req.user.id,
+    });
+  }
+  res.json({ comments: byPhoto });
+});
+
 api.get('/photos/:id/comments', requireUser, async (req, res) => {
   const p = await one('SELECT id, comments_closed FROM photos WHERE id = $1', [Number(req.params.id) || 0]);
   if (!p) return fail(res, 404, 'That photo was not found.');
