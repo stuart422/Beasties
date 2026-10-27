@@ -2,17 +2,19 @@ import '@fontsource/dm-serif-display/400.css';
 import '@fontsource/dm-serif-display/400-italic.css';
 import '@fontsource-variable/figtree/wght.css';
 import './styles/main.css';
+import './styles/home.css';
 
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { initChrome, isReduced, onMotionChange } from './chrome.js';
 import { startHomeMotion, stopHomeMotion } from './home-motion.js';
-import { initTilt } from './tilt.js';
 import { spreadPhotos } from './data/home.js';
 import { api } from './api.js';
-import { initSpread, renderArchive, renderNew, renderGathering, renderSightings } from './ui.js';
+import {
+  renderHeroStack, renderFacts, initReel, renderArchive, renderNew, renderGathering, renderSightings,
+} from './ui.js';
 
-gsap.registerPlugin(ScrollTrigger);
+const root = document.documentElement;
+root.classList.add('is-intro');
 await initChrome('home');
 
 // Home reads the Fall 2026 album, the album list and the latest sightings from the server.
@@ -21,107 +23,79 @@ const [{ events }, { photos: fall }, { sightings, total: sightingTotal }] = awai
 ]);
 const photos = fall.map((p) => ({ f: p.src, s: p.thumb, w: p.w, h: p.h, cap: p.caption, day: p.day }));
 document.querySelectorAll('.js-total').forEach((el) => { el.textContent = photos.length; });
+renderHeroStack(photos);
+renderFacts(events);
+renderGathering();
 renderArchive(photos, events);
 renderNew(photos);
-renderGathering();
 renderSightings(sightings, sightingTotal);
 
+/* ---------- The reel: a soft crossfade with a little drift, or an instant swap ---------- */
 
-const root = document.documentElement;
-const canUse3D = () => {
-  if (root.classList.contains('no-webgl')) return false;
-  try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; }
-};
-
-/* ---------- Fall 2026 spread: photos change with a soft wipe, or instantly ---------- */
-
-initSpread(spreadPhotos(photos), {
-  animate(el, swap) {
-    if (isReduced()) { swap(); return; }
-    gsap.timeline()
-      .to(el, { clipPath: 'inset(0% 0% 0% 100%)', duration: 0.32, ease: 'power2.in' })
-      .add(swap)
-      .fromTo(el, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.6, ease: 'expo.out', clearProps: 'clipPath' });
+initReel(spreadPhotos(photos), {
+  animate({ frame, from, to, dir, swap }) {
+    if (isReduced()) {
+      swap();
+      from.classList.remove('is-on');
+      to.classList.add('is-on');
+      return;
+    }
+    gsap.killTweensOf([from, to, frame]);
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+      .to(from, { autoAlpha: 0, xPercent: -6 * dir, scale: 0.98, duration: 0.45, ease: 'power2.in' }, 0)
+      .to(frame, { scale: 0.985, duration: 0.3, ease: 'power2.in' }, 0)
+      .add(swap, 0.3)
+      .fromTo(to, { autoAlpha: 0, xPercent: 6 * dir, scale: 1.04 }, { autoAlpha: 1, xPercent: 0, scale: 1, duration: 0.8 }, 0.28)
+      .to(frame, { scale: 1, duration: 0.7 }, 0.3)
+      .add(() => {
+        from.classList.remove('is-on');
+        to.classList.add('is-on');
+        gsap.set(from, { clearProps: 'all' });
+        gsap.set(to, { clearProps: 'transform' });
+      });
   },
 });
 
-/* ---------- Hero: the photograph as a print in 3D (full motion and WebGL only) ---------- */
+/* ---------- The header is plum while it sits on the cover, ivory below it ---------- */
 
-const stage = document.getElementById('heroStage');
-let print = null;
-let heroMotion = [];
+const hero = document.getElementById('hero');
+new IntersectionObserver(([e]) => root.classList.toggle('on-cover', e.isIntersecting), {
+  rootMargin: '-72px 0px 0px 0px', threshold: 0,
+}).observe(hero.querySelector('.hx__in'));
 
-async function startPrint() {
-  if (print || isReduced() || !canUse3D()) return;
-  try {
-    const { HeroPrint } = await import('./hero-print.js');
-    if (isReduced()) return;
-    print = new HeroPrint({
-      canvas: document.getElementById('heroCanvas'),
-      frame: stage.querySelector('.frame--hero'),
-      img: document.getElementById('heroImg'),
-      onLost: stopPrint,
-      onReady() {
-        stage.classList.add('is-3d');
-        print.layout();
-        // the print settles back into the page as the headline arrives
-        heroMotion.push(gsap.to(print, { intro: 1, duration: 1.8, delay: 0.25, ease: 'power3.out', onUpdate: () => print?.markDirty() }));
-        heroMotion.push(ScrollTrigger.create({
-          trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true,
-          onUpdate: (st) => { if (print) { print.scroll = st.progress; print.markDirty(); } },
-        }));
-      },
-    });
-    if (import.meta.env.DEV) window.__print = print;
-  } catch (err) {
-    console.warn('3D print unavailable, showing the flat photo.', err);
-    stopPrint();
-  }
-}
-function stopPrint() {
-  heroMotion.forEach((m) => m.kill());
-  heroMotion = [];
-  print?.dispose();
-  print = null;
-  stage.classList.remove('is-3d');
-}
+/* ---------- The hero prints lean toward the mouse (CSS variables only, one write per frame) ---------- */
 
-// Desktop: the print leans toward the mouse. Phone: it leans gently toward your finger
-// while you touch it and settles back when you let go. No motion sensors are used.
-const hero = document.querySelector('.hero');
-const lean = (e, strength) => {
-  const r = stage.getBoundingClientRect();
-  const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
-  const ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
-  print.setPointer(nx * strength, ny * strength);
-};
+const stack = document.getElementById('heroStack');
+const front = stack.querySelector('.hx__print--front');
+let pending = null;
 hero.addEventListener('pointermove', (e) => {
-  if (!print) return;
-  if (e.pointerType === 'mouse') lean(e, 1);
-  else if (e.pressure > 0 && stage.contains(e.target)) lean(e, 0.6);
+  if (e.pointerType !== 'mouse' || isReduced()) return;
+  if (!pending) requestAnimationFrame(() => {
+    const { x, y } = pending;
+    pending = null;
+    stack.style.setProperty('--px', `${(-x * 6).toFixed(1)}px`);
+    stack.style.setProperty('--py', `${(-y * 6).toFixed(1)}px`);
+    front.style.setProperty('--ry', `${(x * 5).toFixed(2)}deg`);
+    front.style.setProperty('--rx', `${(-y * 4).toFixed(2)}deg`);
+  });
+  pending = { x: (e.clientX / innerWidth) * 2 - 1, y: (e.clientY / hero.offsetHeight) * 2 - 1 };
+}, { passive: true });
+hero.addEventListener('pointerleave', () => {
+  ['--px', '--py'].forEach((v) => stack.style.removeProperty(v));
+  ['--rx', '--ry'].forEach((v) => front.style.removeProperty(v));
 });
-stage.addEventListener('pointerdown', (e) => { if (print && e.pointerType !== 'mouse') lean(e, 0.6); });
-['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => hero.addEventListener(t, () => print?.setPointer(0, 0)));
-gsap.ticker.add((t, deltaMs) => print?.tick(deltaMs / 1000));
-window.addEventListener('pagehide', () => print?.dispose());
 
 /* ---------- Motion system ---------- */
 
-initTilt(document.querySelector('.spread'));
-initTilt(document.querySelector('.archive'));
-initTilt(document.querySelector('.news'));
-
-if (!isReduced()) startHomeMotion({ hasPrint: canUse3D() });
-startPrint();
-onMotionChange((reduced) => {
-  if (reduced) { stopHomeMotion(); stopPrint(); } else { startPrint(); }
-});
+if (isReduced()) root.classList.remove('is-intro');
+else startHomeMotion();
+onMotionChange((reduced) => { if (reduced) { stopHomeMotion(); root.classList.remove('is-intro'); } });
 
 if (import.meta.env.DEV) {
-  // test hook: the hidden preview tab gets no animation frames, so step everything by hand
-  window.__step = () => {
+  // test hook: a hidden preview tab gets no animation frames, so step everything by hand
+  window.__step = async () => {
+    const { ScrollTrigger } = await import('gsap/ScrollTrigger');
     ScrollTrigger.update();
     gsap.globalTimeline.totalTime(gsap.globalTimeline.totalTime() + 20);
-    for (let n = 0; n < 60; n++) { print?.markDirty(); print?.tick(0.05); }
   };
 }

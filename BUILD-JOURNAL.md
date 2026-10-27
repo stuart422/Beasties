@@ -1,7 +1,44 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (new sign-in page).
+Last updated: 10-27-2026 (Home redesign).
+
+## Home redesign: the memory book, opened (10-27-2026)
+
+The approved sign-in look (plum cloth, warm light, ivory prints, gold hairlines) now runs through Home. The sign-in page is unchanged.
+
+### Sections
+- **Hero:** a plum cover with a gold-foil "Friends". The Friday group photo sits on a print, caption written on the mount, with two Fall 2026 prints fanned behind. Stats row underneath: albums, photos, days to Winter Weekend (all from real data).
+- **Header:** plum while it sits on the cover, ivory once you scroll past.
+- **Fall 2026, in pictures:** a reel.
+  - Big 01 / 14 counter, crossfade with a slight drift between photos.
+  - Swipe or drag, arrow keys, a gold progress line, a thumbnail rail with no scrollbar.
+  - Whole photos, never cropped. The next photos are loaded ahead so they appear at once.
+- **Next gathering:** an invitation card with a tear-off stub, a perforation and the countdown in gold.
+- **Album archive:**
+  - The Fall 2026 feature card with four fanned prints (they spread on hover).
+  - A dashed "Next page" card for Winter 2027.
+  - Earlier albums as numbered cards with a gold spine.
+- **What's new:** a big +29 and three fanned prints.
+- **Sightings:** the empty state is now a blank instant photo with a camera. It shows real sightings when there are some.
+
+### Speed (no lag)
+- **Three.js is removed** (hero-print.js, tilt.js and the `three` package). The Home script is now 54 KB, 21 KB gzipped, and the big-chunk build warning is gone.
+- **Animation is cheap:**
+  - Only transforms and opacity animate. No layout changes or filters.
+  - Native scrolling (no scroll-jacking), and section reveals play once.
+  - The mouse lean writes once per frame, through CSS variables.
+- Small images (640px) everywhere except the hero and the reel.
+- Reduce motion turns everything off and shows the page complete.
+
+### Fixed on the way
+- `.sr` (screen-reader-only) was used but never defined, so the hidden "Write a comment" label showed on the album page. Now defined.
+
+### Checked (headless Edge, signed in locally)
+- Desktop 1440 and phone 390: every section, no sideways scroll, no broken images.
+- Full motion: every section reveals.
+- Reel tests: next, previous, thumbnail, arrow key, swipe, progress bar. Header switches colour. Reduce motion mid-page leaves nothing hidden. No console errors.
+- Full regression API test: all pass. Album, Events, Sightings and My photos pages unchanged.
 
 ## New sign-in page (10-27-2026)
 

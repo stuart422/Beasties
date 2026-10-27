@@ -27,8 +27,7 @@
     "heic-convert": "^2.1.0",
     "multer": "^2.5.0",
     "pg": "^8.23.1",
-    "sharp": "^0.35.5",
-    "three": "^0.186.1"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.15",

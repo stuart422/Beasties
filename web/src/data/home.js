@@ -18,6 +18,9 @@ export const spreadPhotos = (photos) => photos.filter((p) => p.cap && !idOf(p).s
 // Contact sheet beside the Fall 2026 album (all 4:3, so nothing is cropped).
 export const ARCHIVE_IDS = ['04', '07', '21', '38'];
 
+// Two prints fanned behind the hero photo (both 4:3): autumn mountains, the summit.
+export const STACK_IDS = ['08', '05'];
+
 // What's new: three of the 29 newly added photos (Sunday breakfast, per photos.js).
 export const NEW_IDS = ['25', '24', '26'];
 
