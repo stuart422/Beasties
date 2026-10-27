@@ -1,7 +1,76 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (Vercel preparation).
+Last updated: 10-27-2026 (live site fixed and tested).
+
+## Live site fix (10-27-2026)
+
+### What was wrong
+- **Sign-in error:** the live database was empty. The logs said `relation "login_attempts" does not exist`, so every sign-in crashed with "Something went wrong".
+- **No photos:** the code only used Blob when `BLOB_READ_WRITE_TOKEN` existed. This store uses OIDC (`BLOB_STORE_ID`), so the live site looked in a local folder that doesn't exist on Vercel.
+- **The Blob store is empty:** 0 files. The 44 photos were never uploaded.
+- **Uploads would break:** the browser-token upload route needs a read-write token, which OIDC stores don't have.
+
+### Fixed (commit `48ba43c`, now live)
+- **Database setup runs inside every Vercel build** (`server/build-setup.js`). The build has the secret settings, so nobody copies secrets. It only adds what's missing and prints counts only.
+- **Blob on:** with `BLOB_STORE_ID` (OIDC) or a token.
+- **Uploads:** the browser shrinks each photo to under 4 MB and sends one at a time. The server still removes EXIF and GPS, resizes and makes thumbnails. The camera date is sent along for the day filter.
+- **Delete photo:** new, for the uploader, owner and admins, with a confirm step.
+- **Sign-in messages:** a wrong password says so. A site problem says "problem on the site, your password may be fine".
+- **Upload script:** works with OIDC too.
+
+### Tested locally
+- Wrong password: 401 with a clear message.
+- A 9.1 MB phone-size photo was sent as 2.1 MB and saved as 1800x1350.
+- Camera date 2026-10-17 was filed under Saturday. A bad date became "Day not set".
+- Delete: the owner deleted from the viewer, and the album went back to empty. A member gets 403 on others' photos and can delete their own, and the files are gone.
+- Signed out: photos return 401.
+- The build passes.
+
+### Live checks (read-only)
+- `/api/login` returned 500 before the fix (cause above).
+- A signed-out photo request returned 401, which is correct.
+
+### Blocked: needs Ahmed
+1. **GitHub repo is PUBLIC.** Make it private first (GitHub > Settings > Danger Zone > Change visibility). It has no photos or secrets, but it does have the member names in captions.
+2. **Push:** the safety check blocked `git push`. After the repo is private, allow it, or run `git push origin main` yourself.
+3. **Photo upload:** the store only accepts OIDC from Production and Preview, and this computer's token is "development". Fix: Vercel > Storage > beasties-photos > Projects > beasties-grp > also tick **Development**. Then I re-run `vercel env pull` and the upload script.
+4. **Owner login for the live test:** OWNER_EMAIL and OWNER_PASSWORD are "Sensitive" in Vercel, so they can't be pulled. Put them in a new file `Beasties-Working/.env.owner.local` (two lines, already git-ignored). Don't paste them in chat.
+
+### Re-check (10-27-2026, after Ahmed's reply)
+- **Repo:** still public. The GitHub API says `visibility=public` and the page loads for anyone. Not pushed.
+- **Blob store:** the development environment is still not allowed. The development env pull has no `BLOB_STORE_ID`, and the dry run is refused.
+- **Owner file:** `.env.owner.local` was not found anywhere under `E:\Beasti Project`.
+
+### Re-check 2 (10-27-2026)
+- **Repo:** still public.
+- **Blob:** `vercel env ls` shows BLOB_STORE_ID only on Preview and Production (unchanged in 9 hours), so the Development connection wasn't saved.
+- **Owner file:** still not found on E: or in Desktop, Documents, Downloads or OneDrive.
+- Nothing pushed, nothing uploaded.
+
+### Re-check 3 (10-27-2026): all three pass
+- **Repo:** private. Anonymous GitHub API and page both return 404.
+- **Blob:** BLOB_STORE_ID is on Production, Preview and Development.
+- **Owner file:** both lines are present, and the file is git-ignored.
+- **Photos uploaded:** 88 files (44 photos + 44 thumbnails) are in the private store, with no dji file. Anonymous fetch of a file returns 403. A second dry run finds all 88 already there.
+- **Bug found and fixed (commit `7229f87`):** Blob's "not found" error is named `Error`, so a name check never matched. A missing photo would give a 500 instead of a 404, and the upload script stopped on the first new file. Now uses `instanceof`.
+- **Push still blocked:** the safety check refused `git push` again. Local main is 2 commits ahead (`48ba43c`, `7229f87`).
+
+### Pushed and live (10-27-2026)
+- **Push:** `7229f87` is on main. The Vercel build is green. Build log: migrations applied; albums, photo records and owner created; "9 albums, 44 photo records, 1 owner, 1 account".
+- **Live test as owner (scripted, all pass):**
+  - Signed out: `/api/me` returns no user; album API, photos and thumbnails return 401; every page shows only the sign-in screen.
+  - Wrong password: 401, "That email and password do not match."
+  - Owner sign-in: 200, role owner; 9 albums; Fall 2026 has 44 photos; no dji photo.
+  - Photo and thumbnail files load from private Blob (200, image/jpeg).
+  - Upload: a 2000px test photo was saved at 1800x1350 with no EXIF, filed under Saturday from its camera date, and its thumbnail loads.
+  - Caption edit and undo both work. Adding and deleting a comment works.
+  - Deleting the test photo gives 200, its file then returns 404, and the album is back to 44. Nothing from the test is left on the live site.
+- **Note:** the owner password has a `#`. That's fine on the site. Only Node's `--env-file` reader cuts it off there, so the test read the file directly.
+- **Not tested:** clicking through in a real browser while signed in (I don't type real passwords into the live site). Ahmed or Stuart should sign in once on a phone and on a computer.
+
+---
+
 
 ## Vercel preparation (10-27-2026)
 
@@ -376,7 +445,7 @@ The server listens on 127.0.0.1, which is this computer only.
 # Earlier journal (copied from the prototype)
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (album template, captions, Events page).
+Last updated: 10-27-2026 (live site fixed and tested).
 
 ## Done
 
