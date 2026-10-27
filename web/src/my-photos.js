@@ -17,7 +17,7 @@ if (!photos.length) {
   content.innerHTML = `<div class="album-empty"><div class="empty-frame"><div>
       <p class="album-empty__title">No photos yet</p>
       <p class="album-empty__note">Open an album and choose Add photos.</p></div></div>
-      <a class="btn btn--plum" href="album.html">Go to the albums</a></div>`;
+      <a class="btn btn--forest" href="album.html">Go to the albums</a></div>`;
 } else {
   intro.textContent = `${photos.length} ${photos.length === 1 ? 'photo' : 'photos'} you added, newest first.`;
   const wall = document.createElement('ul');

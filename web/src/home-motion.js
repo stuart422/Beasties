@@ -28,7 +28,6 @@ function onEnter(trigger, start = 'top 80%') {
 export function startHomeMotion() {
   if (ctx) return; // never initialise twice
   const root = document.documentElement;
-  const small = matchMedia('(max-width: 900px)').matches;
 
   ctx = gsap.context(() => {
     /* ---------- Entrance: the title rises, the prints are dealt, the photo lands ---------- */
@@ -37,16 +36,15 @@ export function startHomeMotion() {
       .from('.site-head', { yPercent: -100, duration: 0.9 }, 0)
       .from('.hx__eyebrow', { y: 16, autoAlpha: 0, duration: 0.8 }, 0.1)
       .from('[data-hero-line]', { yPercent: 115, duration: 1.3, stagger: 0.12 }, 0.12)
-      .from('.hx__lead', { y: 22, autoAlpha: 0, duration: 1 }, 0.5)
-      .from('.hx .actions .btn', { y: 18, autoAlpha: 0, duration: 0.9, stagger: 0.08 }, 0.62)
+      .from('.hx__story p', { y: 22, autoAlpha: 0, duration: 1, stagger: 0.06 }, 0.45)
+      .from('.hx__lead', { y: 22, autoAlpha: 0, duration: 1 }, 0.8)
+      .from('.hx .actions .btn', { y: 18, autoAlpha: 0, duration: 0.9, stagger: 0.08 }, 0.9)
       .from('.hx__print--back', { y: 120, rotation: -22, autoAlpha: 0, duration: 1.4, clearProps: 'transform' }, 0.2)
       .from('.hx__print--mid', { y: 140, rotation: 20, autoAlpha: 0, duration: 1.4, clearProps: 'transform' }, 0.32)
       .from('.hx__print--front', { y: 110, rotationX: 14, autoAlpha: 0, duration: 1.5, clearProps: 'transform' }, 0.45)
       .from('.hx__facts > div', { y: 20, autoAlpha: 0, duration: 0.9, stagger: 0.08 }, 0.8);
     document.querySelectorAll('.hx__facts dd').forEach((dd) => countUp(dd, intro, 0.9));
 
-    // The prints rise a little faster than the page as the cover scrolls away.
-    gsap.to('.hx__stack', { yPercent: small ? -4 : -8, ease: 'none', scrollTrigger: { trigger: '.hx', start: 'top top', end: 'bottom top', scrub: 0.6 } });
 
     /* ---------- Fall 2026, in pictures ---------- */
     onEnter('.reel')

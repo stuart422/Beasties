@@ -1,5 +1,5 @@
 /* Album, viewer, captions and Events. Same system as the Home page: ivory pages,
-   DM Serif Display titles, photos on white mounts, plum for chosen moments, gold accents. */
+   DM Serif Display titles, photos on white mounts, forest green for chosen moments, gold accents. */
 
 button.text-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 700; }
 .btn--small { min-height: 52px; padding: 0 22px; font-size: 18px; }
@@ -9,11 +9,11 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .album-head { padding: clamp(48px, 8vh, 96px) 0 clamp(32px, 5vh, 56px); }
 .album-head__in { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
 .back-link {
-  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; font-size: 19px; font-weight: 700; color: var(--plum);
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; font-size: 19px; font-weight: 700; color: var(--forest);
   text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 6px;
 }
 .back-link::before { content: ""; width: 9px; height: 9px; border-left: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(45deg); }
-.album-title { font-family: var(--serif); font-weight: 400; font-size: clamp(56px, 7vw, 112px); line-height: 1; color: var(--plum); }
+.album-title { font-family: var(--serif); font-weight: 400; font-size: clamp(56px, 7vw, 112px); line-height: 1; color: var(--forest); }
 .album-meta { font-size: 20px; color: var(--muted); }
 .album-meta[hidden] { display: none; }
 .notice { background: var(--sand); padding: 14px 20px; border-radius: 8px; }
@@ -27,7 +27,7 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .cap-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
 .cap-add, .cap-link {
   display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0; background: none; border: 0; cursor: pointer;
-  font-size: 18px; font-weight: 700; color: var(--plum);
+  font-size: 18px; font-weight: 700; color: var(--forest);
   text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 6px;
 }
 .cap-add .plus { width: 14px; height: 14px; }
@@ -38,23 +38,23 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
   width: 100%; font: 400 20px/1.5 var(--sans); color: var(--ink); background: var(--white);
   padding: 14px 16px; border: 2px solid var(--rule); border-radius: 8px; resize: vertical;
 }
-.cap-input:focus { outline: none; border-color: var(--plum); box-shadow: 0 0 0 3px rgba(58, 26, 79, .18); }
+.cap-input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(23, 74, 52, .18); }
 .cap-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; width: 100%; }
-.cap-count { font-size: 18px; font-weight: 700; color: var(--plum); font-variant-numeric: tabular-nums; }
+.cap-count { font-size: 18px; font-weight: 700; color: var(--forest); font-variant-numeric: tabular-nums; }
 .cap-note { font-size: 17px; color: var(--muted); }
 
 /* ---------- Prototype role switch ---------- */
 .album-empty + .role-bar { margin-bottom: var(--section); }
 .role-bar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 18px 22px;
-  border: 2px dashed var(--plum); border-radius: 10px; background: var(--white);
+  border: 2px dashed var(--forest); border-radius: 10px; background: var(--white);
 }
 .role-bar__label { font-size: 19px; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .role-bar__tag { background: var(--gold); color: var(--ink); padding: 2px 12px; border-radius: 999px; font-size: 17px; }
-.seg { display: inline-flex; border: 2px solid var(--plum); border-radius: 999px; overflow: hidden; }
-.seg button { min-height: 48px; padding: 0 20px; border: 0; background: var(--white); color: var(--plum); font-size: 18px; font-weight: 700; cursor: pointer; }
-.seg button + button { border-left: 2px solid var(--plum); }
-.seg button[aria-pressed="true"] { background: var(--plum); color: var(--cream); }
+.seg { display: inline-flex; border: 2px solid var(--forest); border-radius: 999px; overflow: hidden; }
+.seg button { min-height: 48px; padding: 0 20px; border: 0; background: var(--white); color: var(--forest); font-size: 18px; font-weight: 700; cursor: pointer; }
+.seg button + button { border-left: 2px solid var(--forest); }
+.seg button[aria-pressed="true"] { background: var(--forest); color: var(--cream); }
 .role-bar__note { flex-basis: 100%; font-size: 18px; color: var(--muted); }
 
 /* ---------- Day filters ---------- */
@@ -64,8 +64,8 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
   display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px; border-radius: 999px;
   border: 1.5px solid var(--rule); background: var(--white); color: var(--ink); font-size: 18px; font-weight: 600; cursor: pointer;
 }
-.days button:hover { border-color: var(--plum); }
-.days button[aria-pressed="true"] { background: var(--plum); border-color: var(--plum); color: var(--cream); }
+.days button:hover { border-color: var(--forest); }
+.days button[aria-pressed="true"] { background: var(--forest); border-color: var(--forest); color: var(--cream); }
 .days__n { font-size: 16px; font-weight: 700; opacity: .8; }
 .wall[hidden], .hint[hidden] { display: none; }
 .hint { min-height: 1.6em; color: var(--muted); font-size: 18px; margin-bottom: 20px; }
@@ -86,7 +86,7 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .album-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; max-width: 640px; margin-top: 40px; padding-bottom: var(--section); }
 .album-empty[hidden] { display: none; }
 .album-empty .empty-frame { text-align: center; }
-.album-empty .album-empty__title { font-family: var(--serif); font-size: clamp(34px, 3vw, 44px); color: var(--plum); line-height: 1.1; }
+.album-empty .album-empty__title { font-family: var(--serif); font-size: clamp(34px, 3vw, 44px); color: var(--forest); line-height: 1.1; }
 .album-empty__note { margin-top: 8px; color: var(--muted); }
 
 /* ---------- Album rows (all albums, past events) ---------- */
@@ -98,7 +98,7 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .album-row__name { font-family: var(--serif); font-size: clamp(30px, 2.8vw, 42px); line-height: 1.15; color: var(--ink); }
 .album-row__link:hover .album-row__name { text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 3px; text-underline-offset: 8px; }
 .album-row__status { font-size: 18px; color: var(--muted); }
-.album-row--open .album-row__status { color: var(--plum); font-weight: 700; }
+.album-row--open .album-row__status { color: var(--forest); font-weight: 700; }
 
 /* ---------- Viewer ---------- */
 .viewer {
@@ -106,12 +106,12 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
   background: var(--ivory);
 }
 .viewer[hidden] { display: none; }
-.viewer__photo { position: relative; background: var(--plum-deep); display: flex; align-items: center; justify-content: center; min-height: 0; touch-action: pan-y; }
+.viewer__photo { position: relative; background: var(--forest-deep); display: flex; align-items: center; justify-content: center; min-height: 0; touch-action: pan-y; }
 .viewer__stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(24px, 4vw, 56px) 96px; } /* side room keeps the arrows off the photo */
 .viewer__stage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; background: var(--white); padding: clamp(6px, .8vw, 12px); box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .6); }
 .viewer__arrow {
   position: absolute; top: 50%; transform: translateY(-50%); width: 58px; height: 58px; border-radius: 50%;
-  display: grid; place-items: center; background: var(--white); color: var(--plum); border: 0; cursor: pointer; z-index: 1;
+  display: grid; place-items: center; background: var(--white); color: var(--forest); border: 0; cursor: pointer; z-index: 1;
 }
 .viewer__arrow:hover { background: var(--gold); color: var(--ink); }
 .viewer__arrow--prev { left: 18px; }
@@ -125,12 +125,12 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .viewer__download { align-self: flex-start; }
 
 /* ---------- Events page ---------- */
-.next-event { background: var(--plum); color: var(--cream); }
+.next-event { background: var(--forest); color: var(--cream); }
 .next-event__in { padding-top: clamp(64px, 9vh, 112px); padding-bottom: clamp(64px, 9vh, 112px); }
 .next-event__title { margin-top: 10px; font-family: var(--serif); font-weight: 400; font-size: clamp(54px, 7vw, 112px); line-height: 1; }
 .next-event__when { margin-top: 28px; font-family: var(--serif); font-size: clamp(28px, 2.6vw, 40px); line-height: 1.2; text-wrap: balance; }
-.next-event__place { margin-top: 6px; color: var(--lilac); font-size: 21px; }
-.next-event__row { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 40px; margin-top: 36px; padding-top: 28px; border-top: 1px solid rgba(233, 221, 242, .35); }
+.next-event__place { margin-top: 6px; color: var(--sage); font-size: 21px; }
+.next-event__row { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 40px; margin-top: 36px; padding-top: 28px; border-top: 1px solid rgba(220, 232, 218, .35); }
 .past { padding-top: var(--section); }
 .past__intro { margin: 14px 0 32px; }
 
@@ -165,12 +165,12 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
   width: 100%; min-height: 56px; padding: 12px 16px; font: 400 20px/1.4 var(--sans); color: var(--ink);
   background: var(--white); border: 2px solid var(--rule); border-radius: 8px;
 }
-.field__input:focus { outline: none; border-color: var(--plum); box-shadow: 0 0 0 3px rgba(58, 26, 79, .18); }
+.field__input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(23, 74, 52, .18); }
 .field__input--select { min-height: 52px; padding: 8px 12px; font-size: 18px; width: auto; }
 .form-error { color: #8A1C1C; background: #FCEBEA; border-left: 6px solid #B3261E; padding: 12px 16px; border-radius: 6px; font-size: 18px; }
 .form-error[hidden] { display: none; }
 .panel-form { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; max-width: 560px; padding: 32px 0; border-top: 1px solid var(--rule); }
-.form-title { font-family: var(--serif); font-weight: 400; font-size: 32px; color: var(--plum); }
+.form-title { font-family: var(--serif); font-weight: 400; font-size: 32px; color: var(--forest); }
 .account { padding-bottom: var(--section); }
 
 /* Sign in: no private photos on this page */
@@ -183,14 +183,14 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 /* Comments */
 .comments { display: flex; flex-direction: column; gap: 14px; padding-top: 20px; border-top: 1px solid var(--rule); }
 .comments__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.comments__title { font-family: var(--serif); font-weight: 400; font-size: 28px; color: var(--plum); }
+.comments__title { font-family: var(--serif); font-weight: 400; font-size: 28px; color: var(--forest); }
 .close-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; font-size: 18px; font-weight: 600; cursor: pointer; }
 .close-switch[hidden] { display: none; }
-.close-switch input { width: 24px; height: 24px; accent-color: var(--plum); }
+.close-switch input { width: 24px; height: 24px; accent-color: var(--forest); }
 .comments__list { display: flex; flex-direction: column; gap: 10px; }
 .comments__none { color: var(--muted); font-size: 18px; }
 .comment { background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-.comment__who { font-size: 17px; font-weight: 700; color: var(--plum); }
+.comment__who { font-size: 17px; font-weight: 700; color: var(--forest); }
 .comment__body { font-size: 19px; overflow-wrap: anywhere; }
 .comments__closed { font-size: 18px; font-weight: 600; color: var(--muted); }
 .comments__closed[hidden], .comments__form[hidden] { display: none; }
@@ -202,11 +202,11 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .sheet[hidden] { display: none; }
 .sheet__panel { width: min(760px, 100%); background: var(--ivory); border-radius: 14px; padding: clamp(22px, 4vw, 40px); display: flex; flex-direction: column; gap: 18px; box-shadow: 0 40px 100px rgba(0, 0, 0, .35); }
 .sheet__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.sheet__title { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 3vw, 40px); color: var(--plum); line-height: 1.1; }
+.sheet__title { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 3vw, 40px); color: var(--forest); line-height: 1.1; }
 .sheet__foot { display: flex; justify-content: flex-end; }
 .pick { position: relative; align-self: flex-start; }
 .pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-.pick input:focus-visible + .btn { outline: 3px solid var(--plum); outline-offset: 3px; }
+.pick input:focus-visible + .btn { outline: 3px solid var(--forest); outline-offset: 3px; }
 .up-list { display: flex; flex-direction: column; gap: 14px; }
 .up-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: start; background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
 .up-item__thumb { width: 96px; height: 96px; display: grid; place-items: center; background: var(--sand); border-radius: 6px; overflow: hidden; font-weight: 700; color: var(--muted); }
@@ -214,16 +214,16 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .up-item__body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .up-item__name { font-size: 17px; color: var(--muted); overflow-wrap: anywhere; }
 .up-progress__bar { height: 14px; background: var(--sand); border-radius: 999px; overflow: hidden; }
-.up-progress__bar span { display: block; height: 100%; width: 0; background: var(--plum); transition: width .2s; }
+.up-progress__bar span { display: block; height: 100%; width: 0; background: var(--forest); transition: width .2s; }
 .up-progress__text { margin-top: 8px; font-size: 18px; font-weight: 600; }
 
 /* My photos and members */
-.tile__album { margin-top: 12px; font-size: 17px; font-weight: 700; color: var(--plum); }
+.tile__album { margin-top: 12px; font-size: 17px; font-weight: 700; color: var(--forest); }
 .tile .tile__album + .tile__cap { margin-top: 2px; }
 .members { border-top: 1px solid var(--ink); max-width: 760px; }
 .member { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 18px 0; border-bottom: 1px solid var(--rule); }
 .member__name { font-family: var(--serif); font-size: 28px; margin-right: auto; }
-.member__role { font-size: 18px; font-weight: 700; color: var(--plum); }
+.member__role { font-size: 18px; font-weight: 700; color: var(--forest); }
 
 @media (max-width: 860px) {
 }
@@ -245,7 +245,7 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
    ===================================================================== */
 .sight-wall { margin-top: 24px; }
 .sight__body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; width: 100%; margin-top: 12px; }
-.sight__place { font-family: var(--serif); font-size: clamp(24px, 2vw, 28px); line-height: 1.2; color: var(--plum); overflow-wrap: anywhere; }
+.sight__place { font-family: var(--serif); font-size: clamp(24px, 2vw, 28px); line-height: 1.2; color: var(--forest); overflow-wrap: anywhere; }
 .sight__cap { margin-top: 0; }
 .sight__by { font-size: 16px; color: var(--muted); }
 .sight__body .cap-actions { margin-top: 6px; }

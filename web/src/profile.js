@@ -16,7 +16,7 @@ content.innerHTML = `
     <h2 class="form-title">Your name</h2>
     <label class="field"><span class="field__label">Name shown with your photos and comments</span>
       <input class="field__input" name="name" maxlength="60" required></label>
-    <button class="btn btn--plum" type="submit">Save name</button>
+    <button class="btn btn--forest" type="submit">Save name</button>
   </form>
   <form class="panel-form" id="passForm">
     <h2 class="form-title">Change password</h2>
@@ -25,7 +25,7 @@ content.innerHTML = `
     <label class="field"><span class="field__label">New password (at least 10 characters)</span>
       <input class="field__input" type="password" name="next" autocomplete="new-password" minlength="10" required></label>
     <p class="form-error" id="passError" role="alert" hidden></p>
-    <button class="btn btn--plum" type="submit">Change password</button>
+    <button class="btn btn--forest" type="submit">Change password</button>
   </form>`;
 
 const nameForm = document.getElementById('nameForm');

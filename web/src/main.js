@@ -56,7 +56,7 @@ initReel(spreadPhotos(photos), {
   },
 });
 
-/* ---------- The header is plum while it sits on the cover, ivory below it ---------- */
+/* ---------- The header is forest green while it sits on the cover, ivory below it ---------- */
 
 const hero = document.getElementById('hero');
 new IntersectionObserver(([e]) => root.classList.toggle('on-cover', e.isIntersecting), {

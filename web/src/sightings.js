@@ -100,7 +100,7 @@ function editSighting(body, s) {
       <textarea class="cap-input" id="cap-${s.id}" rows="3" maxlength="${CAPTION_MAX}" aria-describedby="cap-${s.id}-count"></textarea>
       <div class="cap-foot"><p class="cap-count" id="cap-${s.id}-count"></p></div></div>
     <div class="cap-actions">
-      <button class="btn btn--plum btn--small" type="button" data-save>Save</button>
+      <button class="btn btn--forest btn--small" type="button" data-save>Save</button>
       <button class="btn btn--quiet btn--small" type="button" data-cancel>Cancel</button>
     </div>`;
   const place = body.querySelector('[data-place]');

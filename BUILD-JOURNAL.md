@@ -1,7 +1,38 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (Home redesign).
+Last updated: 10-27-2026 (green palette and welcome story: preview for Stuart).
+
+## Green palette + welcome story (10-27-2026): PREVIEW, not live yet
+
+Stuart asked for two things: a colour-only change, and the "A Family of Friends" welcome story on Home. Both are on branch `preview/green-story` for his review. `main` (the live site) is unchanged.
+
+### 1. Colours only (whole site)
+- Measured from Stuart's preview image: forest green `#113C2B`, autumn gold `#E8AC2E`, warm cream text `#FCF4E4`.
+- **Plum family to green:**
+  - Brand `#3A1A4F` becomes `#174A34`, deep `#0F3324`, the cover `#113C2B`.
+  - Lilac becomes pale sage `#DCE8DA`.
+  - On the sign-in prints, the dusk and dawn light become moss and sage.
+- **Gold:** `#FFC53D` becomes autumn gold `#E8AC2E`. Hover `#F2BF4F`.
+- **Cream:** the page is `#FBF6EC`, cream text `#FCF4E4`, sand `#F3EBDA`.
+- **Names follow:** `--plum` is now `--forest`, `--lilac` is `--sage`, `btn--plum` is `btn--forest`.
+- One scripted swap over every stylesheet, page and script. No layout, type, photo or behaviour changes.
+
+### 2. Welcome story (Home)
+- Placed right under the "A Family of Friends" heading.
+- **Heading:** smaller, prominent but not oversized (was up to 150px, now up to 96px).
+- **Text:** all 8 paragraphs, Stuart's wording and order exactly (checked by script), no "Read more". Plain green behind the text, never over a photo.
+- **Photo:** the group photo stays beside the story on desktop and follows you as you read. Whole photo, not cropped.
+- The last line, "That's what it means to be a Beastie.", is in gold italic.
+- The old one-line intro stays below, smaller, above the buttons.
+
+### Checked
+- Desktop 1440 and phone 390, every section and every page.
+- Full regression test: all pass.
+- Stuart's example HTML file ("Beasties_Homepage_featured-story.html") was not on this computer. I worked from his screenshot.
+
+### To go live after Stuart approves
+- Merge `preview/green-story` into `main` and push. Vercel then deploys it to the live site.
 
 ## Home redesign: the memory book, opened (10-27-2026)
 

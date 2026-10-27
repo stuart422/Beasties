@@ -551,7 +551,7 @@ function editCaption(box, { text, label, save, after }) {
     <textarea class="cap-input" id="${id}" rows="3" maxlength="${CAPTION_MAX}" aria-describedby="${id}-count"></textarea>
     <div class="cap-foot"><p class="cap-count" id="${id}-count"></p></div>
     <div class="cap-actions">
-      <button class="btn btn--plum btn--small" type="button" data-save>Save caption</button>
+      <button class="btn btn--forest btn--small" type="button" data-save>Save caption</button>
       <button class="btn btn--quiet btn--small" type="button" data-cancel>Cancel</button>
     </div>`;
   box.querySelector('label').textContent = label;

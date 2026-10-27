@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#FFF8F0">
+<meta name="theme-color" content="#FBF6EC">
 <title>Albums · Beasties</title>
 <!-- One album page for every event: album.html?event=<id>. With no event it lists all albums. -->
 <script>
@@ -31,7 +31,7 @@
         <h1 class="album-title" id="albumTitle"></h1>
         <p class="album-meta" id="albumMeta"></p>
         <div class="cap-block cap-block--album" id="albumCap"></div>
-        <button class="btn btn--plum" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+        <button class="btn btn--forest" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
       </div>
     </section>
 
@@ -47,7 +47,7 @@
             <p class="album-empty__note" id="emptyNote"></p>
           </div>
         </div>
-        <button class="btn btn--plum" type="button" id="emptyAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
+        <button class="btn btn--forest" type="button" id="emptyAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
       </div>
     </div>
   </div>
@@ -79,7 +79,7 @@
     <p class="body-muted" id="upIntro">Choose up to 20 photos. JPG, PNG, WEBP and HEIC (iPhone) photos all work. Location data is removed from every photo.</p>
     <label class="pick">
       <input type="file" id="upFiles" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple>
-      <span class="btn btn--plum"><span class="plus" aria-hidden="true"></span>Choose photos</span>
+      <span class="btn btn--forest"><span class="plus" aria-hidden="true"></span>Choose photos</span>
     </label>
     <p class="form-error" id="upError" role="alert" hidden></p>
     <ul class="up-list" id="upList"></ul>
@@ -88,7 +88,7 @@
       <p class="up-progress__text" id="upPct" aria-live="polite"></p>
     </div>
     <div class="sheet__foot">
-      <button class="btn btn--plum" type="button" id="upSend" disabled>Upload</button>
+      <button class="btn btn--forest" type="button" id="upSend" disabled>Upload</button>
     </div>
   </div>
 </div>
@@ -136,7 +136,7 @@
         <textarea class="cap-input" id="cBody" rows="2" maxlength="280" placeholder="Write a short comment" aria-describedby="cCount"></textarea>
         <div class="cap-foot">
           <p class="cap-count" id="cCount">0 / 280</p>
-          <button class="btn btn--plum btn--small" type="submit">Post comment</button>
+          <button class="btn btn--forest btn--small" type="submit">Post comment</button>
         </div>
       </form>
     </section>

@@ -30,7 +30,7 @@ if (me.role !== 'owner') {
       if (m.role !== 'owner') {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = m.role === 'admin' ? 'btn btn--quiet btn--small' : 'btn btn--plum btn--small';
+        b.className = m.role === 'admin' ? 'btn btn--quiet btn--small' : 'btn btn--forest btn--small';
         b.textContent = m.role === 'admin' ? 'Remove admin' : 'Make admin';
         b.addEventListener('click', async () => {
           const role = m.role === 'admin' ? 'member' : 'admin';
