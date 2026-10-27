@@ -16,7 +16,7 @@ export default defineConfig({
     outDir: resolve(root, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
-      input: Object.fromEntries(['index', 'album', 'events', 'signin', 'my-photos', 'profile', 'admin']
+      input: Object.fromEntries(['index', 'album', 'events', 'sightings', 'signin', 'my-photos', 'profile', 'admin']
         .map((n) => [n, resolve(web, `${n}.html`)])),
     },
   },

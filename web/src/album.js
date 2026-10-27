@@ -50,6 +50,14 @@ async function showIndex(notFound) {
       : ev.upcoming ? 'Photos after the event' : 'Photos coming soon';
     rows.append(li);
   }
+  // Random Beastie Sightings: a gallery of its own, listed after the event albums.
+  const { total } = await api('/sightings?limit=1');
+  const li = document.createElement('li');
+  li.className = `album-row${total ? ' album-row--open' : ''}`;
+  li.innerHTML = `<a class="album-row__link" href="sightings.html">
+      <span class="album-row__name">Random Beastie Sightings</span><span class="album-row__status"></span></a>`;
+  li.querySelector('.album-row__status').textContent = total ? `${total} ${total === 1 ? 'sighting' : 'sightings'}` : 'Share the first one';
+  rows.append(li);
 }
 
 /* =====================================================================

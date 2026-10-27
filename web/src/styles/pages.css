@@ -154,13 +154,9 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 }
 
 /* =====================================================================
-   Working version: sign-in, forms, uploads, comments, account pages
+   Sign-in, forms, uploads, comments, account pages
    ===================================================================== */
 
-.proto--local { font-size: 16px; }
-.proto--local .proto__in { min-height: 44px; }
-.menu__item { display: flex; align-items: center; min-height: 52px; padding: 0 20px; font-size: 19px; text-decoration: none; color: var(--ink); }
-.menu__item:hover { background: var(--sand); }
 
 /* Forms */
 .field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
@@ -254,3 +250,17 @@ button.text-link { background: none; border: 0; padding: 0; cursor: pointer; fon
 .viewer__more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; }
 .viewer__delete { color: #8A1C1C; text-decoration-color: #E8A0A0; }
 .viewer__delete[hidden] { display: none; }
+
+/* =====================================================================
+   Random Beastie Sightings
+   ===================================================================== */
+.sight-wall { margin-top: 24px; }
+.sight__body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; width: 100%; margin-top: 12px; }
+.sight__place { font-family: var(--serif); font-size: clamp(24px, 2vw, 28px); line-height: 1.2; color: var(--plum); overflow-wrap: anywhere; }
+.sight__cap { margin-top: 0; }
+.sight__by { font-size: 16px; color: var(--muted); }
+.sight__body .cap-actions { margin-top: 6px; }
+.sight__body .field { margin-top: 4px; }
+.sight-view { align-items: center; }
+.sight-view .sheet__panel { width: min(1100px, 100%); }
+.sight-view img { width: 100%; height: auto; max-height: 76vh; object-fit: contain; background: var(--white); }

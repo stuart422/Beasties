@@ -14,7 +14,7 @@ const content = document.getElementById('content');
 if (me.role !== 'owner') {
   intro.textContent = 'Only the owner can manage admins.';
 } else {
-  intro.textContent = 'Admins can edit any caption, set photo days and manage comments. Only the owner can change who is an admin.';
+  intro.textContent = 'Admins can edit any caption, set photo days, manage comments and edit or delete any sighting. Only the owner can change who is an admin.';
   const list = document.createElement('ul');
   list.className = 'members';
   content.append(list);

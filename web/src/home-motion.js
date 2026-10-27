@@ -97,7 +97,7 @@ export function startHomeMotion({ hasPrint }) {
     /* ---------- Random Beastie Sightings ---------- */
     onEnter('.sightings')
       .from('.sightings__text > *', { y: 26, autoAlpha: 0, duration: 0.8, stagger: 0.08 })
-      .from('.empty-frame', { scale: 0.94, autoAlpha: 0, duration: 1, ease: 'expo.out' }, 0.15)
+      .from('#sightEmpty:not([hidden]), #sightGrid:not([hidden])', { scale: 0.94, autoAlpha: 0, duration: 1, ease: 'expo.out' }, 0.15)
       .from('.sightings__empty .btn', { y: 16, autoAlpha: 0, duration: 0.6 }, 0.5);
 
     /* ---------- Footer ---------- */

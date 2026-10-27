@@ -71,7 +71,7 @@ if (PROD) {
 }
 
 server.listen(PORT, HOST, () => {
-  console.log('\nBeasties working version (local only, not online)');
+  console.log('\nBeasties local development server (this computer only)');
   console.log(`Open http://${HOST}:${PORT}/`);
   console.log(`Database: ${IS_LOCAL_DB ? 'local PGlite (data/pglite)' : 'DATABASE_URL'} · Photos: ${STORAGE === 'blob' ? 'private Vercel Blob' : 'local photos/ folder'}`);
   if (seeded.applied.length) console.log(`Migrations applied: ${seeded.applied.join(', ')}`);

@@ -37,7 +37,7 @@ const TEST_ACCOUNTS = [
 
 const LOGINS_FILE = resolve(DATA_DIR, 'test-logins.txt');
 
-// The approved photo list from the prototype (photos-fall-2026.js sets window.ALBUM).
+// The approved photo list (from the design prototype) (photos-fall-2026.js sets window.ALBUM).
 export function approvedPhotos() {
   const sandbox = { window: {} };
   vm.runInNewContext(readFileSync(resolve(import.meta.dirname, 'seed/photos-fall-2026.js'), 'utf8'), sandbox);
@@ -83,7 +83,7 @@ async function seedLocalTestAccounts() {
   if (!IS_LOCAL_DB) return false;
   if ((await one('SELECT COUNT(*)::int AS n FROM users')).n) return false;
   const lines = [
-    'Beasties working version: local test accounts (this computer only).',
+    'Beasties: local test accounts (this computer only).',
     `Created ${new Date().toISOString().slice(0, 10)}. Run \`npm run reset-test-data\` for new passwords.`,
     '',
   ];

@@ -1,5 +1,5 @@
-// Shared page chrome for every page: the local-version banner, header, account menu, footer,
-// the Reduce motion switch and notices. One copy, so every page matches.
+// Shared page chrome for every page: header, account menu, footer, the Reduce motion
+// switch and notices. One copy, so every page matches.
 import { api, roleLabel } from './api.js';
 
 const NAV = [
@@ -7,6 +7,10 @@ const NAV = [
   { id: 'events', label: 'Events', href: 'events.html' },
   { id: 'photos', label: 'Photos', href: 'album.html' },
 ];
+
+const MOTION_TOGGLE = `<button class="motion-toggle" type="button" aria-pressed="false">
+  <span class="switch" aria-hidden="true"></span>Reduce motion
+</button>`;
 
 const root = document.documentElement;
 const listeners = new Set();
@@ -27,14 +31,6 @@ export async function initChrome(page) {
   const top = document.getElementById('chrome');
   top.innerHTML = `
     <a class="skip" href="#main">Skip to main content</a>
-    <div class="proto proto--local" role="note">
-      <div class="wrap proto__in">
-        <p><b>Local working version.</b> Not online.</p>
-        <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false">
-          <span class="switch" aria-hidden="true"></span>Reduce motion
-        </button>
-      </div>
-    </div>
     <header class="site-head">
       <div class="wrap site-head__in">
         <a class="brand" href="index.html">Beasties</a>
@@ -48,9 +44,12 @@ export async function initChrome(page) {
           </button>
           <div class="menu" id="acctMenu" hidden>
             <p class="menu__who">${esc(user.name)} <span>${esc(roleLabel(user.role))}</span></p>
+            <a class="menu__item" href="sightings.html">Random Beastie Sightings</a>
             <a class="menu__item" href="my-photos.html">My photos</a>
             <a class="menu__item" href="profile.html">My profile</a>
             ${user.role === 'owner' ? '<a class="menu__item" href="admin.html">Members and admins</a>' : ''}
+            <hr>
+            ${MOTION_TOGGLE}
             <hr>
             <button type="button" id="signOut">Sign out</button>
           </div>
@@ -64,7 +63,8 @@ export async function initChrome(page) {
       <footer class="site-foot">
         <div class="wrap site-foot__in">
           <p class="sign">Beasties</p>
-          <p class="small">A family of friends. Private member site, local working version on this computer. Nothing here is online.</p>
+          <p class="small">A family of friends. A private site for members only.</p>
+          ${MOTION_TOGGLE}
         </div>
       </footer>
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>`;
@@ -72,7 +72,6 @@ export async function initChrome(page) {
 
   if (user) initMenu();
   initScrollProgress();
-  initSimulated();
   initMotionToggle();
   return user;
 }
@@ -93,7 +92,6 @@ function initScrollProgress() {
 
 /* ---------- Account menu ---------- */
 
-let closeMenu = () => {};
 function initMenu() {
   const btn = document.getElementById('acctBtn');
   const menu = document.getElementById('acctMenu');
@@ -102,7 +100,6 @@ function initMenu() {
     btn.setAttribute('aria-expanded', String(open));
     if (open) menu.querySelector('a, button').focus();
   };
-  closeMenu = () => set(false);
   btn.addEventListener('click', (e) => { e.stopPropagation(); set(menu.hidden); });
   document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) set(false); });
   document.addEventListener('keydown', (e) => {
@@ -128,29 +125,21 @@ export function notify(title, body = '') {
   toastTimer = setTimeout(() => { toast.hidden = true; }, 4600);
 }
 
-// Anything not built yet still says so plainly.
-function initSimulated() {
-  document.addEventListener('click', (e) => {
-    const el = e.target.closest('[data-sim]');
-    if (!el) return;
-    e.preventDefault();
-    closeMenu();
-    notify(`Not built yet: ${el.dataset.sim}`, 'This part is still a preview. Nothing was sent or saved.');
-  });
-}
-
 /* ---------- Reduce motion ---------- */
 
+// The switch appears in the footer and in the account menu; both stay in step.
 function initMotionToggle() {
-  const toggle = document.getElementById('motionToggle');
+  const toggles = [...document.querySelectorAll('.motion-toggle')];
   const apply = (on, save) => {
     root.dataset.motion = on ? 'reduced' : 'full';
-    toggle.setAttribute('aria-pressed', String(on));
+    toggles.forEach((t) => t.setAttribute('aria-pressed', String(on)));
     if (save) { try { localStorage.setItem('beasties-motion', on ? 'reduced' : 'full'); } catch {} }
     listeners.forEach((fn) => fn(on));
   };
-  toggle.addEventListener('click', () => apply(!isReduced(), true));
-  toggle.setAttribute('aria-pressed', String(isReduced()));
+  toggles.forEach((t) => {
+    t.addEventListener('click', () => apply(!isReduced(), true));
+    t.setAttribute('aria-pressed', String(isReduced()));
+  });
 }
 
 /* ---------- Gentle section reveal, shared by every page ---------- */

@@ -118,7 +118,9 @@ api.get('/my/photos', requireUser, async (req, res) => {
 
 const setText = (t, type, id, value) => (type === 'photo'
   ? t.query('UPDATE photos SET caption = $1 WHERE id = $2', [value, Number(id)])
-  : t.query('UPDATE events SET caption = $1 WHERE id = $2', [value, String(id)]));
+  : type === 'sighting'
+    ? t.query('UPDATE sightings SET caption = $1 WHERE id = $2', [value, Number(id)])
+    : t.query('UPDATE events SET caption = $1 WHERE id = $2', [value, String(id)]));
 
 const saveCaption = (type, id, oldText, newText, userId) => tx(async (t) => {
   await t.query('INSERT INTO caption_history (target_type, target_id, old_text, new_text, user_id) VALUES ($1, $2, $3, $4, $5)',
@@ -325,6 +327,109 @@ api.patch('/photos/:id/comments-closed', requireRole('admin'), async (req, res) 
   if (!p) return fail(res, 404, 'That photo was not found.');
   await query('UPDATE photos SET comments_closed = $1 WHERE id = $2', [!!req.body?.closed, p.id]);
   res.json({ closed: !!req.body?.closed });
+});
+
+/* =====================================================================
+   Random Beastie Sightings: a gallery of its own. Same photo pipeline as the albums.
+   The person who shared a sighting edits it; the owner and admins edit or delete any.
+   ===================================================================== */
+
+export const PLACE_MAX = 80;
+
+const SIGHTING_SELECT = `SELECT s.*, u.name AS uploader_name,
+  EXISTS (SELECT 1 FROM caption_history h WHERE h.target_type = 'sighting' AND h.target_id = s.id::text) AS has_history
+  FROM sightings s LEFT JOIN users u ON u.id = s.uploader_id`;
+
+function sightingOut(s, user) {
+  const mine = !!user && s.uploader_id === user.id;
+  const canEdit = isAdmin(user) || mine;
+  return {
+    id: s.id, src: `/photos/${s.file}`, thumb: `/photos/${s.thumb}`, w: s.width, h: s.height,
+    place: s.place, caption: s.caption, uploader: s.uploader_name || null, at: s.created_at,
+    mine, canEdit, canDelete: canEdit, canUndo: canEdit && !!s.has_history,
+  };
+}
+const freshSighting = async (id, user) => sightingOut(await one(`${SIGHTING_SELECT} WHERE s.id = $1`, [id]), user);
+
+async function sightingForEdit(req, res) {
+  const s = await one('SELECT * FROM sightings WHERE id = $1', [Number(req.params.id) || 0]);
+  if (!s) { fail(res, 404, 'That sighting was not found.'); return null; }
+  if (!(isAdmin(req.user) || s.uploader_id === req.user.id)) { fail(res, 403, 'Only the person who shared this sighting, or an admin, can change it.'); return null; }
+  return s;
+}
+
+api.get('/sightings', requireUser, async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 500, 1), 500);
+  const rows = await query(`${SIGHTING_SELECT} ORDER BY s.id DESC LIMIT $1`, [limit]);
+  const { n } = await one('SELECT COUNT(*)::int AS n FROM sightings');
+  res.json({ sightings: rows.map((s) => sightingOut(s, req.user)), total: n });
+});
+
+const sightingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_BYTES, files: 1, fields: 5, fieldSize: 4096 },
+});
+
+api.post('/sightings', requireUser, (req, res, next) => {
+  sightingUpload.single('photo')(req, res, async (err) => {
+    try {
+      if (err) {
+        return fail(res, 400, err.code === 'LIMIT_FILE_SIZE' ? 'The photo must be under 30 MB.'
+          : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE' ? 'Please add one photo per sighting.'
+            : 'The upload could not be read.');
+      }
+      if (!req.file) return fail(res, 400, 'Please choose a photo.');
+      if (tooLong(req.body?.place, PLACE_MAX)) return fail(res, 400, `The place can be up to ${PLACE_MAX} characters.`);
+      if (tooLong(req.body?.caption, CAPTION_MAX)) return fail(res, 400, `Captions can be up to ${CAPTION_MAX} characters.`);
+      let img;
+      try { img = await processImage(req.file.buffer); }
+      catch (error) { return fail(res, 400, error.message); }
+      const base = `${Date.now()}-${randomBytes(5).toString('hex')}`;
+      const file = `sightings/${base}.jpg`;
+      const thumb = `sightings/${base}-sm.jpg`;
+      await storage.put(file, img.large);
+      await storage.put(thumb, img.small);
+      const row = await one(`INSERT INTO sightings (file, thumb, width, height, place, caption, uploader_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [file, thumb, img.width, img.height, text(req.body?.place, PLACE_MAX), text(req.body?.caption, CAPTION_MAX), req.user.id]);
+      res.json({ sighting: await freshSighting(row.id, req.user) });
+    } catch (error) { next(error); }
+  });
+});
+
+// Edit the place and/or the caption. Caption changes go into the history so they can be undone.
+api.patch('/sightings/:id', requireUser, async (req, res) => {
+  const s = await sightingForEdit(req, res);
+  if (!s) return;
+  const b = req.body || {};
+  if ('place' in b && tooLong(b.place, PLACE_MAX)) return fail(res, 400, `The place can be up to ${PLACE_MAX} characters.`);
+  if ('caption' in b && tooLong(b.caption, CAPTION_MAX)) return fail(res, 400, `Captions can be up to ${CAPTION_MAX} characters.`);
+  if ('place' in b) await query('UPDATE sightings SET place = $1 WHERE id = $2', [text(b.place, PLACE_MAX), s.id]);
+  if ('caption' in b) {
+    const next = text(b.caption, CAPTION_MAX);
+    if (next !== s.caption) await saveCaption('sighting', s.id, s.caption, next, req.user.id);
+  }
+  res.json({ sighting: await freshSighting(s.id, req.user) });
+});
+
+api.post('/sightings/:id/caption/undo', requireUser, async (req, res) => {
+  const s = await sightingForEdit(req, res);
+  if (!s) return;
+  if (!(await undoCaption('sighting', s.id))) return fail(res, 400, 'There is no earlier caption to go back to.');
+  res.json({ sighting: await freshSighting(s.id, req.user) });
+});
+
+api.delete('/sightings/:id', requireUser, async (req, res) => {
+  const s = await one('SELECT * FROM sightings WHERE id = $1', [Number(req.params.id) || 0]);
+  if (!s) return fail(res, 404, 'That sighting was not found.');
+  if (!(isAdmin(req.user) || s.uploader_id === req.user.id)) return fail(res, 403, 'Only the person who shared this sighting, or an admin, can delete it.');
+  await tx(async (t) => {
+    await t.query("DELETE FROM caption_history WHERE target_type = 'sighting' AND target_id = $1", [String(s.id)]);
+    await t.query('DELETE FROM sightings WHERE id = $1', [s.id]);
+  });
+  await storage.remove(s.file);
+  await storage.remove(s.thumb);
+  res.json({ deleted: s.id });
 });
 
 /* =====================================================================

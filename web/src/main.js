@@ -10,18 +10,21 @@ import { startHomeMotion, stopHomeMotion } from './home-motion.js';
 import { initTilt } from './tilt.js';
 import { spreadPhotos } from './data/home.js';
 import { api } from './api.js';
-import { initSpread, renderArchive, renderNew, renderGathering } from './ui.js';
+import { initSpread, renderArchive, renderNew, renderGathering, renderSightings } from './ui.js';
 
 gsap.registerPlugin(ScrollTrigger);
 await initChrome('home');
 
-// Home reads the Fall 2026 album and the album list from the local server.
-const [{ events }, { photos: fall }] = await Promise.all([api('/events'), api('/events/fall-2026')]);
+// Home reads the Fall 2026 album, the album list and the latest sightings from the server.
+const [{ events }, { photos: fall }, { sightings, total: sightingTotal }] = await Promise.all([
+  api('/events'), api('/events/fall-2026'), api('/sightings?limit=4'),
+]);
 const photos = fall.map((p) => ({ f: p.src, s: p.thumb, w: p.w, h: p.h, cap: p.caption, day: p.day }));
 document.querySelectorAll('.js-total').forEach((el) => { el.textContent = photos.length; });
 renderArchive(photos, events);
 renderNew(photos);
 renderGathering();
+renderSightings(sightings, sightingTotal);
 
 
 const root = document.documentElement;

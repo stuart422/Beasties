@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#FFF8F0">
 <title>Beasties</title>
-<!-- Home page of the local working version. The approved design lives in Beasties-Home-Prototype. -->
+<!-- Home page of the private member site. -->
 <script>
   // Set motion and 3D preferences before first paint so nothing jumps.
   (function () {
@@ -149,11 +149,15 @@
         <p class="sightings__q">Where were you, and what was happening?</p>
         <p class="body-muted">A gallery of its own, for meetups and chance encounters between our weekends. Separate from the event albums.</p>
       </div>
-      <div class="sightings__empty">
-        <div class="empty-frame">
+      <div class="sightings__empty" id="sightBox">
+        <div class="empty-frame" id="sightEmpty">
           <p>No sightings have been shared yet.</p>
         </div>
-        <button class="btn btn--plum" type="button" data-sim="Share a sighting"><span class="plus" aria-hidden="true"></span>Share a sighting</button>
+        <ul class="sightings__grid" id="sightGrid" aria-label="The latest sightings" hidden></ul>
+        <div class="sightings__more">
+          <a class="btn btn--plum" href="sightings.html?add=1"><span class="plus" aria-hidden="true"></span>Share a sighting</a>
+          <a class="text-link" id="sightAll" href="sightings.html" hidden><span>See all sightings</span></a>
+        </div>
       </div>
     </div>
   </section>

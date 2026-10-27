@@ -73,21 +73,17 @@ async function prepare(file) {
   throw new Error('This photo could not be made small enough to send.');
 }
 
-// Send one prepared photo with real progress (XMLHttpRequest reports upload progress).
-function send(eventId, prepared, caption, onProgress) {
+// Send one multipart form with real progress (XMLHttpRequest reports upload progress).
+function send(url, form, onProgress) {
   return new Promise((resolve, reject) => {
-    const form = new FormData();
-    form.append('photos', prepared.blob, prepared.name);
-    form.append('captions', caption || '');
-    form.append('taken', prepared.taken || '');
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `/api/events/${encodeURIComponent(eventId)}/photos`);
+    xhr.open('POST', url);
     xhr.setRequestHeader('X-Beasties', '1');
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data.results?.[0] || { ok: false, error: 'No answer from the site.' });
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
       else if (xhr.status === 413) reject(new ApiError('This photo is too large to send.', 413));
       else if (xhr.status >= 500) reject(new ApiError(SERVER_PROBLEM, xhr.status));
       else reject(new ApiError(data.error || 'The upload did not finish. Please try again.', xhr.status));
@@ -105,14 +101,29 @@ export async function uploadPhotos(eventId, files, captions, onProgress) {
     step(0);
     try {
       const prepared = await prepare(f);
-      const r = await send(eventId, prepared, captions[i], (p) => step(p * 0.9));
-      results.push({ ...r, name: f.name });
+      const form = new FormData();
+      form.append('photos', prepared.blob, prepared.name);
+      form.append('captions', captions[i] || '');
+      form.append('taken', prepared.taken || '');
+      const data = await send(`/api/events/${encodeURIComponent(eventId)}/photos`, form, (p) => step(p * 0.9));
+      results.push({ ...(data.results?.[0] || { ok: false, error: 'No answer from the site.' }), name: f.name });
     } catch (err) {
       results.push({ name: f.name, ok: false, error: err.message || 'This photo could not be added.' });
     }
     step(1);
   }
   return { results };
+}
+
+// Share one sighting: the photo (shrunk like album photos), a place and a caption.
+export async function uploadSighting(file, place, caption, onProgress) {
+  const prepared = await prepare(file);
+  const form = new FormData();
+  form.append('photo', prepared.blob, prepared.name);
+  form.append('place', place || '');
+  form.append('caption', caption || '');
+  const data = await send('/api/sightings', form, onProgress);
+  return data.sighting;
 }
 
 export const roleLabel = (role) => ({ owner: 'Owner', admin: 'Admin', member: 'Member' }[role] || role);

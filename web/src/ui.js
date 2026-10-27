@@ -120,3 +120,33 @@ export function renderGathering() {
   el.innerHTML = `<b>${days}</b>${days === 1 ? 'day' : 'days'} to go`;
   el.hidden = false;
 }
+
+/* ---------- F. Random Beastie Sightings: the latest few ---------- */
+
+export function renderSightings(sightings, total) {
+  if (!sightings.length) return;
+  document.getElementById('sightEmpty').hidden = true;
+  const grid = document.getElementById('sightGrid');
+  for (const s of sightings) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = 'sightings.html';
+    const frame = document.createElement('span');
+    frame.className = 'frame';
+    const img = new Image(s.w, s.h);
+    img.src = s.thumb;
+    img.alt = s.caption || (s.place ? `A sighting at ${s.place}` : 'A Beastie sighting');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    frame.append(img);
+    const place = document.createElement('p');
+    place.textContent = s.place || 'Place not given';
+    a.append(frame, place);
+    li.append(a);
+    grid.append(li);
+  }
+  grid.hidden = false;
+  const all = document.getElementById('sightAll');
+  all.firstElementChild.textContent = total === 1 ? 'See the sighting' : `See all ${total} sightings`;
+  all.hidden = false;
+}
