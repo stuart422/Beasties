@@ -12,7 +12,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import sharp from 'sharp';
 import exifReader from 'exif-reader';
-import { put, head } from '@vercel/blob';
+import { put, head, BlobNotFoundError } from '@vercel/blob';
 import { approvedPhotos } from '../server/seed.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -38,7 +38,7 @@ async function cleanBytes(path) {
 
 async function exists(key) {
   try { await head(key); return true; } catch (err) {
-    if (err?.name === 'BlobNotFoundError') return false;
+    if (err instanceof BlobNotFoundError) return false;
     throw err;
   }
 }

@@ -42,9 +42,9 @@ export async function put(key, data, contentType = 'image/jpeg') {
 export async function open(key) {
   if (!validKey(key)) return null;
   if (STORAGE === 'blob') {
-    const { get } = await blob();
+    const { get, BlobNotFoundError } = await blob();
     const r = await get(key, { access: 'private' }).catch((err) => {
-      if (err?.name === 'BlobNotFoundError') return null;
+      if (err instanceof BlobNotFoundError) return null;
       throw err;
     });
     if (!r || r.statusCode !== 200) return null;
