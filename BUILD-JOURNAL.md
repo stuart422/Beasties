@@ -1,11 +1,11 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (green palette and welcome story: preview for Stuart).
+Last updated: 10-27-2026 (green palette and welcome story: LIVE).
 
-## Green palette + welcome story (10-27-2026): PREVIEW, not live yet
+## Green palette + welcome story (10-27-2026): LIVE
 
-Stuart asked for two things: a colour-only change, and the "A Family of Friends" welcome story on Home. Both are on branch `preview/green-story` for his review. `main` (the live site) is unchanged.
+Stuart asked for two things: a colour-only change, and the "A Family of Friends" welcome story on Home. Stuart approved. `preview/green-story` was merged into `main` (commit `930599c`), and the build is green.
 
 ### 1. Colours only (whole site)
 - Measured from Stuart's preview image: forest green `#113C2B`, autumn gold `#E8AC2E`, warm cream text `#FCF4E4`.
@@ -31,8 +31,13 @@ Stuart asked for two things: a colour-only change, and the "A Family of Friends"
 - Full regression test: all pass.
 - Stuart's example HTML file ("Beasties_Homepage_featured-story.html") was not on this computer. I worked from his screenshot.
 
-### To go live after Stuart approves
-- Merge `preview/green-story` into `main` and push. Vercel then deploys it to the live site.
+### Live check (after the merge)
+- Live pages are green (`#113C2B`), and the story is on Home. Signed out: photos and the API return 401.
+- Owner test: sign-in, Secure + HttpOnly cookie, uploads, captions with Undo, comments, sightings, admin, sign-out all pass.
+- **Note: the live album has 43 photos, not 44.** These are real changes made on the site, not a bug:
+  - Photos 31 and 32 (untitled, "Day not set") were deleted.
+  - One new photo was uploaded by a member.
+  - Photo 40 was set to Saturday.
 
 ## Home redesign: the memory book, opened (10-27-2026)
 
