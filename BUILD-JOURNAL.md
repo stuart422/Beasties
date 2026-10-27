@@ -53,6 +53,18 @@ Last updated: 10-27-2026 (Add member + Arrange photos).
   - Owner: Move down, Move to 1, Undo ×2 back to the original, Done; day filter and viewer work.
 - **Full regression test:** all pass (captions and Undo, comments, uploads, sightings, cookies, 401s).
 
+### Live (commit `c3cc6fb`, build green)
+- **Build log:**
+  - Backup `backup_20261027_1852`: 7 tables, 95 rows, at 18:52:45 UTC, **before** the migration.
+  - Then `003` applied. Still 9 albums, 43 photos, 1 owner.
+- **Live feature test, 38 owner-only checks:** all pass.
+- **Live regression test:** all pass. Cookie: HttpOnly, Secure, SameSite=Strict.
+- **Live click-through, phone and desktop:**
+  - Owner adds a test member. The member signs in, is made to choose a password, and sees no admin tools.
+  - Arrange and Undo, then day filter and viewer: all pass.
+  - (One check expected 3+ people in the list; live has only Stuart. That's a test assumption, not a bug.)
+- **Clean-up checked:** only Stuart's account remains, the 43 photos are in their original order, and no Undo history is left from the tests.
+
 ## Green palette + welcome story (10-27-2026): LIVE
 
 Stuart asked for two things: a colour-only change, and the "A Family of Friends" welcome story on Home. Stuart approved. `preview/green-story` was merged into `main` (commit `930599c`), and the build is green.
