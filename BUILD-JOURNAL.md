@@ -1,7 +1,39 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (Add member + Arrange photos).
+Last updated: 10-28-2026 (View as member, Stuart's test login, regions).
+
+## View as member + test login + regions (10-28-2026)
+
+### View as member (owner and admins)
+- **Account menu > View as member.** The page then hides every owner and admin tool: Members, Arrange, album caption, day picker, delete, close comments, and "Add a caption" on other people's photos.
+- **Banner:** a gold bar says "Viewing as a member", with one button, **Back to owner view** (or "Back to admin view").
+- **Display only:** it's saved in this browser and the server still checks the real role. Comments now carry `mine`, so only your own delete buttons show.
+
+### Bug found and fixed
+- **"Arrange photos" was still visible to members.** The button style beat the `hidden` attribute. The server already refused their moves (403), so nothing changed.
+- **Fix:** `[hidden] { display: none !important; }` for the whole site.
+- The tests now check what's really on screen, not just the flag.
+
+### Stuart's test member login
+- **Already existed:** "Stuart Member Profile", `sbambushew@gmail.com`, member, added 10-27 18:56 UTC by someone on the site. Never signed in.
+- **Add member refused a second one:** 409, "already a member", in any upper or lower case. So I didn't delete it or add "Stuart Testing"; I used the real **Reset password** flow instead.
+- **Tested with it**, then reset once more. The fresh one-time password is only in `Beasties-Working/.stuart-testing-login.txt` (git-ignored; `git check-ignore` confirms it).
+
+### Regions (all US East, close to Boston)
+- **Vercel functions:** `iad1`, Washington, D.C. That's the default, so no `vercel.json` change was needed. The response header shows `function=iad1`.
+- **Neon database:** `aws us-east-1`, Northern Virginia. The build log now prints this, region only.
+- **Blob store:** `iad1`, private.
+
+### Tested on the live site
+- **As Stuart's member login, desktop and phone (27 checks):**
+  - Reset, sign in, forced password change, then Home.
+  - No Members, no View as member, no Arrange, no caption edit on other people's photos, no day, delete or close-comments in the viewer.
+  - The server refuses a caption edit on someone else's photo (403) and the members list (403).
+  - Signed out: photos and API return 401.
+  - (The only miss was my script reading the form error too early; the server refusal was confirmed directly.)
+- **View as member as the owner, desktop and phone, 11 checks each:** all pass. The switch, banner, hidden tools and "Back to owner view" all work, and the server still gives owner permissions.
+- **Local:** full regression, 48 feature checks, and the click-through on both sizes: all pass.
 
 ## Add member + Arrange photos (10-27-2026)
 
