@@ -27,3 +27,6 @@ Thumbs.db
 *.log
 .vercel
 .env*
+
+# One-time test logins kept only on this computer
+.stuart-testing-login.txt

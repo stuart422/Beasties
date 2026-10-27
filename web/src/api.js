@@ -7,6 +7,34 @@ export class ApiError extends Error {
 export const SERVER_PROBLEM = 'The site is having a problem right now. Please try again in a few minutes.';
 const OFFLINE = 'The site could not be reached. Please check your internet connection and try again.';
 
+/* ---------- View as member (owner and admins): display only ---------- */
+
+// Hides owner and admin tools so the page looks exactly as it does to a normal member.
+// Only what the page shows changes; the server keeps checking the real permissions.
+const VIEW_KEY = 'beasties-view';
+export function viewingAsMember() {
+  try { return localStorage.getItem(VIEW_KEY) === 'member'; } catch { return false; }
+}
+export function setViewAsMember(on) {
+  try { if (on) localStorage.setItem(VIEW_KEY, 'member'); else localStorage.removeItem(VIEW_KEY); } catch {}
+}
+const ADMIN_ONLY = ['canSetDay', 'canEditCaption', 'canUndoCaption', 'canArrange', 'canUndoOrder', 'canClose',
+  'canManage', 'canCreateAdmins', 'canChangeRoles'];
+function asMember(v) {
+  if (Array.isArray(v)) return v.map(asMember);
+  if (!v || typeof v !== 'object') return v;
+  const o = {};
+  for (const [k, x] of Object.entries(v)) o[k] = asMember(x);
+  for (const k of ADMIN_ONLY) if (k in o) o[k] = false;
+  if ('mine' in o) {
+    // a member may only change their own photos, sightings and comments
+    if ('canEdit' in o) o.canEdit = !!o.mine;
+    if ('canDelete' in o) o.canDelete = !!o.mine;
+    if ('canUndo' in o) o.canUndo = !!o.mine && o.canUndo;
+  }
+  return o;
+}
+
 export async function api(path, { method = 'GET', body } = {}) {
   let res;
   try {
@@ -30,7 +58,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   }
   if (res.status >= 500) throw new ApiError(SERVER_PROBLEM, res.status);
   if (!res.ok) throw new ApiError(data.error || 'Something went wrong. Please try again.', res.status);
-  return data;
+  return viewingAsMember() ? asMember(data) : data;
 }
 
 /* ---------- Uploads ---------- */

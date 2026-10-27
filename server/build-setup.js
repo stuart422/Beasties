@@ -27,4 +27,9 @@ const c = await one(`SELECT (SELECT COUNT(*)::int FROM events) AS albums,
   (SELECT COUNT(*)::int FROM users WHERE role = 'owner') AS owners,
   (SELECT COUNT(*)::int FROM users) AS people`);
 console.log(`[db] Now: ${c.albums} albums, ${c.photos} photo records, ${c.owners} owner(s), ${c.people} account(s).`);
+// Only the region part of the database host name, e.g. "aws us-east-1". Never the address itself.
+let host = '';
+try { host = new URL(process.env.DATABASE_URL).hostname; } catch {}
+const region = /\.((?:us|eu|ap|sa|ca|me|af)-[a-z]+-\d)\.aws\./.exec(host)?.[1] || /\.([a-z0-9]+)\.azure\./.exec(host)?.[1];
+console.log(`[db] Database region: ${region ? `${host.includes('.azure.') ? 'azure' : 'aws'} ${region}` : 'not shown in the host name'}`);
 process.exit(0);

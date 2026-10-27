@@ -26,6 +26,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; } /* hidden always wins, even over button styles */
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 [data-motion="reduced"] { scroll-behavior: auto; }
 body { margin: 0; background: var(--ivory); color: var(--ink); font: 400 20px/1.6 var(--sans); overflow-x: clip; }
@@ -177,3 +178,16 @@ ul, ol { padding: 0; list-style: none; }
 [data-motion="reduced"] .scroll-progress { display: none; }
 .site-head { position: sticky; }
 
+
+/* View as member (owner and admins): a clear banner with a one-click way back */
+.viewas { background: var(--gold); color: var(--ink); position: relative; z-index: 21; }
+.viewas__in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
+.viewas p { font-size: 18px; line-height: 1.4; }
+.viewas__back { min-height: 46px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--forest); color: var(--cream); font: 700 17px/1 var(--sans); cursor: pointer; }
+.viewas__back:hover { background: var(--forest-deep); }
+.viewas__back:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.menu .menu__item--view { display: flex; align-items: center; font-weight: 700; color: var(--forest); }
+@media (max-width: 640px) {
+  .viewas p span { display: none; }
+  .viewas p { font-size: 17px; }
+}

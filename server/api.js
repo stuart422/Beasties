@@ -356,6 +356,7 @@ async function commentsOut(photoId, user) {
     LEFT JOIN users u ON u.id = c.user_id WHERE c.photo_id = $1 ORDER BY c.id`, [photoId]))
     .map((c) => ({
       id: c.id, body: c.body, author: c.name || 'Former member', at: c.created_at,
+      mine: c.user_id === user.id,
       canDelete: isAdmin(user) || c.user_id === user.id,
     }));
 }

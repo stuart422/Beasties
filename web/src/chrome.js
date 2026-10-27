@@ -1,6 +1,6 @@
 // Shared page chrome for every page: header, account menu, footer, the Reduce motion
 // switch and notices. One copy, so every page matches.
-import { api, roleLabel } from './api.js';
+import { api, roleLabel, viewingAsMember, setViewAsMember } from './api.js';
 
 const NAV = [
   { id: 'home', label: 'Home', href: 'index.html' },
@@ -31,10 +31,21 @@ export async function initChrome(page) {
     location.replace('/set-password.html');
     return new Promise(() => {});
   }
+  // Owner and admins can look at the site the way a normal member sees it (display only).
+  const canPreview = user && (user.role === 'owner' || user.role === 'admin');
+  if (!canPreview && viewingAsMember()) setViewAsMember(false);
+  const preview = canPreview && viewingAsMember();
+  const backLabel = `Back to ${user?.role === 'owner' ? 'owner' : 'admin'} view`;
 
   const top = document.getElementById('chrome');
   top.innerHTML = `
     <a class="skip" href="#main">Skip to main content</a>
+    ${preview ? `<div class="viewas" role="status">
+      <div class="wrap viewas__in">
+        <p><b>Viewing as a member.</b> <span>Owner and admin tools are hidden. Nothing has changed for anyone else.</span></p>
+        <button class="viewas__back" type="button" data-view="back">${backLabel}</button>
+      </div>
+    </div>` : ''}
     <header class="site-head">
       <div class="wrap site-head__in">
         <a class="brand" href="index.html">Beasties</a>
@@ -47,11 +58,12 @@ export async function initChrome(page) {
             <span class="acct-btn__icon" aria-hidden="true"></span><span class="acct-btn__label">Account</span>
           </button>
           <div class="menu" id="acctMenu" hidden>
-            <p class="menu__who">${esc(user.name)} <span>${esc(roleLabel(user.role))}</span></p>
+            <p class="menu__who">${esc(user.name)} <span>${preview ? 'Viewing as a member' : esc(roleLabel(user.role))}</span></p>
             <a class="menu__item" href="sightings.html">Random Beastie Sightings</a>
             <a class="menu__item" href="my-photos.html">My photos</a>
             <a class="menu__item" href="profile.html">My profile</a>
-            ${user.role === 'owner' || user.role === 'admin' ? '<a class="menu__item" href="admin.html">Members</a>' : ''}
+            ${canPreview && !preview ? '<a class="menu__item" href="admin.html">Members</a>' : ''}
+            ${canPreview ? `<button class="menu__item menu__item--view" type="button" data-view="${preview ? 'back' : 'member'}">${preview ? backLabel : 'View as member'}</button>` : ''}
             <hr>
             ${MOTION_TOGGLE}
             <hr>
@@ -77,7 +89,16 @@ export async function initChrome(page) {
   if (user) initMenu();
   initScrollProgress();
   initMotionToggle();
-  return user;
+  // The switch only changes this browser's view, then reloads so every part of the page follows.
+  top.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-view]');
+    if (!b) return;
+    setViewAsMember(b.dataset.view === 'member');
+    if (b.dataset.view === 'member' && location.pathname.endsWith('/admin.html')) location.href = '/';
+    else location.reload();
+  });
+  // Pages decide what to show from this user: while previewing, a normal member.
+  return preview ? { ...user, role: 'member', realRole: user.role, viewingAsMember: true } : user;
 }
 
 /* ---------- Scroll progress line under the header ---------- */
