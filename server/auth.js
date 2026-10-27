@@ -32,7 +32,7 @@ function setCookie(res, token, maxAgeSeconds) {
     `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAgeSeconds}${PRODUCTION ? '; Secure' : ''}`);
 }
 
-export const MIN_PASSWORD = 10;
+export const MIN_PASSWORD = 12;
 
 export function publicUser(u) {
   return u ? { id: u.id, name: u.name, email: u.email, role: u.role, mustChangePassword: !!u.must_change_password } : null;
@@ -126,8 +126,9 @@ export async function logout(req, res) {
 export async function changePassword(req, res) {
   const current = String(req.body?.current || '');
   const next = String(req.body?.next || '');
-  if (!(await bcrypt.compare(current, req.user.password_hash))) return res.status(400).json({ error: 'Your current password is not right.' });
-  if (next.length < MIN_PASSWORD || next.length > 200) return res.status(400).json({ error: `Use at least ${MIN_PASSWORD} characters for the new password.` });
+  if (!(await bcrypt.compare(current, req.user.password_hash))) return res.status(400).json({ error: 'Your current password is not right. Please type it again.', field: 'current' });
+  if (next === current) return res.status(400).json({ error: 'Please choose a new password that is different from the current one.', field: 'next' });
+  if (next.length < MIN_PASSWORD || next.length > 200) return res.status(400).json({ error: `Use at least ${MIN_PASSWORD} characters for the new password.`, field: 'next' });
   await query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(next, 12), req.user.id]);
   // sign out every other session of this person
   await query('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [req.user.id, tokenHash(readCookie(req, COOKIE) || '')]);

@@ -75,6 +75,18 @@ async function showAlbum(id) {
   let day = ALL;
   let list = photos;
   let arranging = false; // owner and admins: Move up / Move down / Move to position
+  // "Grid" or "Big photos" (whole photos filling the width). Remembered on this device.
+  const LAYOUT_KEY = 'beasties-album-layout';
+  let layout = (() => { try { return localStorage.getItem(LAYOUT_KEY) === 'big' ? 'big' : 'grid'; } catch { return 'grid'; } })();
+  const toggle = document.getElementById('viewToggle');
+  toggle.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-layout]');
+    if (!b || b.dataset.layout === layout) return;
+    layout = b.dataset.layout;
+    try { localStorage.setItem(LAYOUT_KEY, layout); } catch {}
+    renderHead();
+    renderWall();
+  });
 
   async function reload() {
     ({ event, photos } = await api(`/events/${encodeURIComponent(id)}`));
@@ -102,6 +114,8 @@ async function showAlbum(id) {
     wall.hidden = empty;
     document.getElementById('hint').hidden = empty;
     document.getElementById('arrangeBtn').hidden = !event.canArrange || photos.length < 2 || arranging;
+    toggle.hidden = empty || arranging;
+    toggle.querySelectorAll('[data-layout]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.layout === layout)));
     document.getElementById('arrangeBar').hidden = !arranging;
     document.getElementById('undoOrder').disabled = !event.canUndoOrder;
   }
@@ -136,6 +150,8 @@ async function showAlbum(id) {
       ? (me.role === 'member' ? 'These photos have no date in their files yet.' : 'These photos have no date in their files. Open one to set its day.')
       : '';
     wall.innerHTML = '';
+    const big = layout === 'big' && !arranging;
+    wall.classList.toggle('wall--big', big);
     list.forEach((p, k) => {
       const li = document.createElement('li');
       li.className = arranging ? 'tile tile--arrange' : 'tile';
@@ -147,7 +163,7 @@ async function showAlbum(id) {
       const frame = document.createElement('span');
       frame.className = 'frame tilt';
       const img = new Image(p.w, p.h);
-      img.src = p.thumb;
+      img.src = big ? p.src : p.thumb; // big view uses the large copy so it stays sharp
       img.alt = '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -256,14 +272,34 @@ async function showAlbum(id) {
     } catch (err) { notify('Nothing to undo', err.message); }
   });
 
-  /* ---------- Viewer ---------- */
+  /* ---------- Full-screen viewer ---------- */
 
+  // The photo fills the screen. "Details" opens caption, day, Download and Comments in a solid
+  // panel; this device remembers whether it was open (closed by default).
   const viewer = document.getElementById('viewer');
   const vimg = document.getElementById('vimg');
+  const vside = document.getElementById('vside');
+  const detailsBtn = document.getElementById('vdetails');
   let at = 0;
   let opener = null;
   let savedScroll = 0;
   const current = () => list[at];
+  const DETAILS_KEY = 'beasties-viewer-details';
+  const detailsWanted = () => { try { return localStorage.getItem(DETAILS_KEY) === 'open'; } catch { return false; } };
+
+  function setDetails(open, remember = true) {
+    vside.hidden = !open;
+    viewer.classList.toggle('has-details', open);
+    detailsBtn.setAttribute('aria-expanded', String(open));
+    detailsBtn.querySelector('.vbtn__text').textContent = open ? 'Hide details' : 'Details';
+    if (remember) { try { localStorage.setItem(DETAILS_KEY, open ? 'open' : 'closed'); } catch {} }
+  }
+  detailsBtn.addEventListener('click', () => {
+    const open = vside.hidden;
+    setDetails(open);
+    if (open) document.getElementById('vsideClose').focus();
+  });
+  document.getElementById('vsideClose').addEventListener('click', () => { setDetails(false); detailsBtn.focus(); });
 
   function replacePhoto(updated) {
     photos = photos.map((p) => (p.id === updated.id ? updated : p));
@@ -312,22 +348,30 @@ async function showAlbum(id) {
   function show(k, startEditing = false) {
     at = (k + list.length) % list.length;
     const p = current();
+    // a gentle fade while the next photo arrives (no fade with Reduce motion)
+    vimg.classList.add('is-changing');
+    vimg.onload = vimg.onerror = () => vimg.classList.remove('is-changing');
     vimg.src = p.src;
     vimg.width = p.w;
     vimg.height = p.h;
     vimg.alt = p.caption || `A photo from ${event.name}, ${p.day}.`;
+    if (vimg.complete && vimg.naturalWidth) vimg.classList.remove('is-changing');
     document.getElementById('vcount').textContent = `${at + 1} of ${list.length}`;
+    for (const id of ['vprev', 'vnext']) document.getElementById(id).hidden = list.length < 2;
     document.getElementById('vdownload').href = `/api/photos/${p.id}/download`;
     document.getElementById('vdelete').hidden = !p.canDelete;
     renderViewerCaption(startEditing);
     renderViewerMeta();
     loadComments();
-    [at + 1, at - 1].forEach((j) => { new Image().src = list[(j + list.length) % list.length].src; });
+    if (startEditing) setDetails(true, false);
+    // fetch the neighbours ahead of time so Next and Previous feel instant
+    [at + 1, at - 1].forEach((j) => { const n = new Image(); n.decoding = 'async'; n.src = list[(j + list.length) % list.length].src; });
   }
 
   function openViewer(k, from, startEditing = false) {
     opener = from;
     savedScroll = window.scrollY;
+    setDetails(startEditing || detailsWanted(), false);
     show(k, startEditing);
     viewer.hidden = false;
     document.documentElement.classList.add('is-locked');
@@ -335,6 +379,7 @@ async function showAlbum(id) {
   }
 
   function closeViewer() {
+    if (inFull()) exitFull();
     viewer.hidden = true;
     document.documentElement.classList.remove('is-locked');
     window.scrollTo({ top: savedScroll, behavior: 'instant' }); // keep the gallery where it was
@@ -342,6 +387,26 @@ async function showAlbum(id) {
   }
 
   document.getElementById('vclose').addEventListener('click', closeViewer);
+
+  /* Full screen: the browser's own full screen where it is allowed (iPad Safari uses the
+     webkit version). Phones that do not allow it (iPhone) never see the button. */
+  const fullBtn = document.getElementById('vfull');
+  const inFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const exitFull = () => { try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); } catch {} };
+  fullBtn.hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  fullBtn.addEventListener('click', async () => {
+    try {
+      if (inFull()) await exitFull();
+      else await (viewer.requestFullscreen || viewer.webkitRequestFullscreen).call(viewer);
+    } catch { notify('Full screen is not available', 'This browser does not allow it here.'); }
+  });
+  const onFullChange = () => {
+    const on = inFull();
+    document.getElementById('vfullText').textContent = on ? 'Exit full screen' : 'Full screen';
+    viewer.classList.toggle('is-full', on);
+  };
+  document.addEventListener('fullscreenchange', onFullChange);
+  document.addEventListener('webkitfullscreenchange', onFullChange);
 
   // Delete: the person who added the photo, or the owner and admins. Asks first.
   document.getElementById('vdelete').addEventListener('click', async () => {
@@ -355,7 +420,7 @@ async function showAlbum(id) {
       notify('Photo deleted', `It has been removed from ${event.name}.`);
     } catch (err) { notify('Photo not deleted', err.message); }
   });
-  for (const [btn, step] of [['vprev', -1], ['vback', -1], ['vnext', 1], ['vfwd', 1]]) {
+  for (const [btn, step] of [['vprev', -1], ['vnext', 1]]) {
     document.getElementById(btn).addEventListener('click', () => show(at + step));
   }
   document.addEventListener('keydown', (e) => {
@@ -365,15 +430,23 @@ async function showAlbum(id) {
     if (e.key === 'ArrowRight') show(at + 1);
     if (e.key === 'Tab') trapFocus(e, viewer);
   });
+  // Swipe left or right on phones and tablets.
   let sx = null;
+  let sy = 0;
   const vphoto = document.getElementById('vphoto');
-  vphoto.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') sx = e.clientX; });
+  vphoto.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
+    sx = e.clientX;
+    sy = e.clientY;
+  });
   vphoto.addEventListener('pointerup', (e) => {
     if (sx === null) return;
     const dx = e.clientX - sx;
-    if (Math.abs(dx) > 50) show(at + (dx < 0 ? 1 : -1));
+    const dy = e.clientY - sy;
     sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) show(at + (dx < 0 ? 1 : -1));
   });
+  vphoto.addEventListener('pointercancel', () => { sx = null; });
 
   /* ---------- Comments ---------- */
 

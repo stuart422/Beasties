@@ -48,6 +48,10 @@
         </div>
         <p class="sr" id="arrangeStatus" aria-live="polite"></p>
       </div>
+      <div class="viewtoggle" id="viewToggle" role="group" aria-label="How to show the photos" hidden>
+        <button type="button" data-layout="grid" aria-pressed="true"><span class="viewtoggle__icon viewtoggle__icon--grid" aria-hidden="true"></span>Grid</button>
+        <button type="button" data-layout="big" aria-pressed="false"><span class="viewtoggle__icon viewtoggle__icon--big" aria-hidden="true"></span>Big photos</button>
+      </div>
       <div class="days" id="days" role="group" aria-label="Show photos by day"></div>
       <p class="hint" id="hint" aria-live="polite"></p>
       <ul class="wall" id="wall" aria-label="Photos"></ul>
@@ -105,17 +109,35 @@
   </div>
 </div>
 
-<!-- Large photo viewer -->
+<!-- Full-screen photo viewer: the photo fills the screen. "Details" opens caption, day,
+     Download and Comments in a solid panel (side panel on wide screens, bottom sheet on phones). -->
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
   <div class="viewer__photo" id="vphoto">
+    <div class="viewer__stage"><img id="vimg" alt="" decoding="async"></div>
+
+    <div class="viewer__top">
+      <p class="viewer__pill" id="vcount" aria-live="polite"></p>
+      <div class="viewer__tools">
+        <button class="vbtn" type="button" id="vdetails" aria-expanded="false" aria-controls="vside">
+          <span class="vbtn__icon vbtn__icon--info" aria-hidden="true"></span><span class="vbtn__text">Details</span>
+        </button>
+        <button class="vbtn" type="button" id="vfull" hidden>
+          <span class="vbtn__icon vbtn__icon--full" aria-hidden="true"></span><span class="vbtn__text" id="vfullText">Full screen</span>
+        </button>
+        <button class="vbtn vbtn--close" type="button" id="vclose" aria-label="Close photo">
+          <span class="vbtn__text">Close</span><span class="vbtn__x" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
     <button class="viewer__arrow viewer__arrow--prev" type="button" id="vprev" aria-label="Previous photo"><span class="chev chev--left" aria-hidden="true"></span></button>
-    <div class="viewer__stage"><img id="vimg" alt=""></div>
     <button class="viewer__arrow viewer__arrow--next" type="button" id="vnext" aria-label="Next photo"><span class="chev" aria-hidden="true"></span></button>
   </div>
-  <aside class="viewer__side">
-    <div class="viewer__top">
-      <p class="viewer__count" id="vcount"></p>
-      <button class="btn btn--quiet btn--small" type="button" id="vclose">Close</button>
+
+  <aside class="viewer__side" id="vside" aria-labelledby="vsideTitle" hidden>
+    <div class="viewer__side-head">
+      <h2 class="viewer__side-title" id="vsideTitle">Details</h2>
+      <button class="btn btn--quiet btn--small" type="button" id="vsideClose">Hide details</button>
     </div>
     <div class="cap-block cap-block--viewer" id="vcap"></div>
     <div class="viewer__meta">
@@ -124,10 +146,6 @@
         <span>Day</span>
         <select class="field__input field__input--select" id="vday"></select>
       </label>
-    </div>
-    <div class="viewer__nav">
-      <button class="btn btn--quiet" type="button" id="vback">Previous</button>
-      <button class="btn btn--quiet" type="button" id="vfwd">Next</button>
     </div>
     <div class="viewer__more">
       <a class="text-link viewer__download" id="vdownload" href="#" download><span>Download</span></a>

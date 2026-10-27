@@ -577,6 +577,15 @@ api.post('/admin/members/:id/reset-password', requireRole('admin'), async (req, 
   res.json({ member: memberOut({ ...u, must_change_password: true }), tempPassword: password });
 });
 
+api.patch('/admin/members/:id/name', requireRole('admin'), async (req, res) => {
+  const u = await targetFor(req, res);
+  if (!u) return;
+  const name = text(req.body?.name, 60);
+  if (!name) return fail(res, 400, 'Please enter their full name.');
+  await query('UPDATE users SET name = $1 WHERE id = $2', [name, u.id]);
+  res.json({ member: memberOut({ ...u, name }) });
+});
+
 api.patch('/admin/members/:id/role', requireRole('owner'), async (req, res) => {
   const u = await targetFor(req, res);
   if (!u) return;

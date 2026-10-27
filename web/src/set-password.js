@@ -7,7 +7,7 @@ import './styles/signin.css';
 
 import { api } from './api.js';
 
-const MIN = 10;
+const MIN = 12;
 const { user } = await api('/me');
 if (!user) location.replace('/signin.html');
 else if (!user.mustChangePassword) location.replace('/');

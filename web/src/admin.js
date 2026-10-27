@@ -124,6 +124,28 @@ function render({ members, canChangeRoles }) {
 
     const actions = li.querySelector('.person__actions');
     if (m.canManage) {
+      actions.append(button('btn btn--quiet btn--small', 'Edit name', () => {
+        const box = li.querySelector('.person__confirm, .person__edit');
+        box.className = 'person__edit';
+        box.innerHTML = `<label class="field"><span class="field__label">Full name</span>
+          <input class="field__input" maxlength="60"></label><div class="person__confirm-actions"></div>`;
+        const input = box.querySelector('input');
+        input.value = m.name;
+        box.lastElementChild.append(
+          button('btn btn--forest btn--small', 'Save name', async () => {
+            try {
+              await api(`/admin/members/${m.id}/name`, { method: 'PATCH', body: { name: input.value } });
+              notify('Name saved', `Now shown as ${input.value.trim()}.`);
+              await load();
+            } catch (err) { notify('Name not saved', err.message); }
+          }),
+          button('btn btn--quiet btn--small', 'Cancel', () => { box.hidden = true; actions.hidden = false; }),
+        );
+        actions.hidden = true;
+        box.hidden = false;
+        input.focus();
+        input.select();
+      }));
       actions.append(button('btn btn--quiet btn--small', 'Reset password', async () => {
         if (!confirm(`Give ${m.name} a new temporary password? Their old password will stop working.`)) return;
         try {
@@ -144,7 +166,8 @@ function render({ members, canChangeRoles }) {
       }
       actions.append(button('btn btn--danger btn--small', 'Remove', () => {
         // a second, clear step before anything is removed
-        const box = li.querySelector('.person__confirm');
+        const box = li.querySelector('.person__confirm, .person__edit');
+        box.className = 'person__confirm';
         box.innerHTML = '<p class="person__confirm-text"></p><div class="person__confirm-actions"></div>';
         box.firstElementChild.textContent = `Remove ${m.name}? They will not be able to sign in. Their photos and comments stay on the site.`;
         const row = box.lastElementChild;
