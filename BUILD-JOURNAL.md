@@ -1,7 +1,59 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-27-2026 (live site fixed and tested).
+Last updated: 10-27-2026 (clean-up and Random Beastie Sightings, live).
+
+## Clean-up and Sightings (10-27-2026), commit `2ab9f6e`, live
+
+### Removed (prototype leftovers)
+- **Top banner** "Local working version. Not online." is gone.
+- **Footer** now says "A family of friends. A private site for members only."
+- **"Not built yet"** click handler is deleted. Nothing on the site uses it any more.
+- **Events tab title** no longer says "(prototype)".
+- **Local server messages** say "local development server" instead of "working version".
+- **Kept:** the Reduce motion switch, now in the footer (every page) and in the Account menu. Both stay in step.
+
+### New: Random Beastie Sightings (real)
+- **Share:** any member adds one photo, a place (80 characters) and a caption (200 characters, live counter).
+- **Same photo pipeline:** EXIF and GPS removed, 1800px copy, thumbnail, private Blob (`sightings/` folder).
+- **Edit:** the person who shared it changes the place and caption. **Undo last caption change** uses the same history as album captions.
+- **Owner and admins:** can edit or delete any sighting. Delete asks to confirm.
+- **Where:** its own page `sightings.html`, the newest 4 on Home, a row after the albums on the Photos page, and the Account menu.
+- **Empty state:** "No sightings have been shared yet." plus a Share button.
+- **Database:** migration `002_sightings.sql` (new table; caption history now allows `sighting`). The Vercel build applied it.
+- **Privacy:** photos still load only when signed in (401 otherwise).
+
+### Bug fixed on the way
+- **Account menu on Home:** the menu links ran together as plain text. Their styles lived in `pages.css`, which Home doesn't load. Moved to `main.css`.
+
+### Tested locally (all pass, 59 checks)
+- Sign-in, wrong password, 9 albums, 44 photos in Fall 2026.
+- Day filters (Friday 1, Saturday 22, Sunday 3, Monday 1, Day not set 17 = 44), download.
+- Upload, caption edit and Undo, comments, delete.
+- Sightings: share, edit, Undo, 201 characters refused.
+  - A member can't edit, undo or delete someone else's sighting (403) but can edit their own.
+  - An admin can edit and delete any.
+- Admin role change and back. A member can't open the admin API (403).
+- In the browser: share form, live counter, Edit, Undo, Delete, empty state, Home strip, the Account menu switch, sign out.
+- Every page's text scanned for the leftover words: none found.
+
+### Tested on the live site (owner, all pass, 50 checks)
+- **Signed out:** every API returns 401, photo files return 401, and pages show only sign-in.
+- **Cookie:** HttpOnly, Secure, SameSite=Strict.
+- **Same feature tests as locally**, owner only (the live site has one account).
+- **Clean-up:** everything the test made was deleted. The Blob store is back to 88 files, with no dji file.
+- **Live pages and scripts:** contain none of the leftover words.
+
+### Security check
+- Repo is private (anonymous GitHub API and page both 404).
+- No keys, tokens, connection strings or passwords in tracked files or anywhere in git history. Pattern scan, plus an exact-value check of every real secret: 0 found.
+- `.gitignore` covers `.env*`, `photos/`, `/data/`, `*.db` and `.vercel/`. Only `.env.example` was ever committed.
+
+### Still needs a person
+- Member and admin permissions were tested locally only, because the live site has just the owner account. Add a real member to try it live.
+- Sign in once on a phone and on a computer to see it with your own eyes.
+
+---
 
 ## Live site fix (10-27-2026)
 
