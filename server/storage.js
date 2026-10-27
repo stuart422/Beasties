@@ -1,6 +1,8 @@
 // Photo storage behind one small interface.
-// - BLOB_READ_WRITE_TOKEN set: Vercel Blob, PRIVATE access only. Photos are never public;
-//   the site streams them to signed-in members through /photos/... (see app.js).
+// - Vercel Blob (PRIVATE access only) when a Blob store is connected: either a read-write
+//   token (BLOB_READ_WRITE_TOKEN) or OIDC (BLOB_STORE_ID; on Vercel the OIDC token is
+//   supplied automatically). Photos are never public; the site streams them to signed-in
+//   members through /photos/... (see app.js).
 // - Otherwise: the local photos/ folder, exactly as in local development today.
 import { createReadStream, existsSync, mkdirSync, statSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
@@ -8,7 +10,8 @@ import { dirname, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { PHOTOS_DIR } from './db.js';
 
-export const STORAGE = process.env.BLOB_READ_WRITE_TOKEN && process.env.STORAGE !== 'local' ? 'blob' : 'local';
+const blobConnected = !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+export const STORAGE = blobConnected && process.env.STORAGE !== 'local' ? 'blob' : 'local';
 
 // Keys look like "fall-2026/01-n013.jpg". Anything else is refused.
 const KEY = /^(incoming\/)?[a-z0-9-]+\/[A-Za-z0-9._-]+$/;

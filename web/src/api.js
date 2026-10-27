@@ -1,30 +1,85 @@
-// Small client for the local server's JSON API.
+// Small client for the site's JSON API.
 
 export class ApiError extends Error {
   constructor(message, status) { super(message); this.status = status; }
 }
 
+export const SERVER_PROBLEM = 'The site is having a problem right now. Please try again in a few minutes.';
+const OFFLINE = 'The site could not be reached. Please check your internet connection and try again.';
+
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: { 'X-Beasties': '1', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: { 'X-Beasties': '1', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(OFFLINE, 0);
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && !path.startsWith('/login')) {
     location.href = `/signin.html?next=${encodeURIComponent(location.pathname + location.search)}`;
     throw new ApiError('Please sign in.', 401);
   }
+  if (res.status >= 500) throw new ApiError(SERVER_PROBLEM, res.status);
   if (!res.ok) throw new ApiError(data.error || 'Something went wrong. Please try again.', res.status);
   return data;
 }
 
-// Upload with real progress (fetch cannot report upload progress, XMLHttpRequest can).
-export function uploadPhotos(eventId, files, captions, onProgress) {
+/* ---------- Uploads ---------- */
+
+const MAX_REQUEST = 4 * 1024 * 1024; // stays under Vercel's 4.5 MB request limit
+const LONG_SIDE = 2400; // the server makes the final 1800px copy from this
+
+// The camera date as YYYY-MM-DD, read from the original file before it is shrunk
+// (shrinking drops the EXIF block). Reads only the first 256 KB.
+async function takenDate(file) {
+  try {
+    const head = new TextDecoder('latin1').decode(await file.slice(0, 262144).arrayBuffer());
+    const m = /(\d{4}):(\d{2}):(\d{2}) \d{2}:\d{2}:\d{2}/.exec(head);
+    return m && m[1] > '1990' ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  } catch {
+    return '';
+  }
+}
+
+// Shrink a photo in the browser to a JPEG under the request limit. The server still strips
+// all metadata and makes the final copies. Photos the browser cannot open (for example HEIC
+// in some desktop browsers) are sent as they are if small enough.
+async function prepare(file) {
+  const taken = await takenDate(file);
+  let bitmap = null;
+  try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch {}
+  if (!bitmap) {
+    if (file.size <= MAX_REQUEST) return { blob: file, name: file.name, taken };
+    throw new Error('This browser cannot prepare this photo and it is too large to send. Please try it from a phone, or as a JPG.');
+  }
+  for (const [side, quality] of [[LONG_SIDE, 0.9], [2000, 0.85], [1800, 0.8]]) {
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
+    if (blob && blob.size <= MAX_REQUEST) {
+      bitmap.close?.();
+      return { blob, name: file.name.replace(/\.[^.]+$/, '') + '.jpg', taken };
+    }
+  }
+  bitmap.close?.();
+  throw new Error('This photo could not be made small enough to send.');
+}
+
+// Send one prepared photo with real progress (XMLHttpRequest reports upload progress).
+function send(eventId, prepared, caption, onProgress) {
   return new Promise((resolve, reject) => {
     const form = new FormData();
-    files.forEach((f, i) => { form.append('photos', f, f.name); form.append('captions', captions[i] || ''); });
+    form.append('photos', prepared.blob, prepared.name);
+    form.append('captions', caption || '');
+    form.append('taken', prepared.taken || '');
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/events/${encodeURIComponent(eventId)}/photos`);
     xhr.setRequestHeader('X-Beasties', '1');
@@ -32,7 +87,9 @@ export function uploadPhotos(eventId, files, captions, onProgress) {
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data.results?.[0] || { ok: false, error: 'No answer from the site.' });
+      else if (xhr.status === 413) reject(new ApiError('This photo is too large to send.', 413));
+      else if (xhr.status >= 500) reject(new ApiError(SERVER_PROBLEM, xhr.status));
       else reject(new ApiError(data.error || 'The upload did not finish. Please try again.', xhr.status));
     };
     xhr.onerror = () => reject(new ApiError('The upload was interrupted. Please check the connection and try again.', 0));
@@ -40,36 +97,22 @@ export function uploadPhotos(eventId, files, captions, onProgress) {
   });
 }
 
-// On Vercel: each original goes straight to a private "incoming/" blob (no 4.5 MB limit),
-// then the server cleans, resizes and stores it. Results match uploadPhotos().
-export async function uploadViaBlob(eventId, files, captions, onProgress) {
-  const { upload } = await import('@vercel/blob/client');
-  const total = files.reduce((n, f) => n + f.size, 0) || 1;
-  let done = 0;
+// Upload several photos, one request each, with overall progress from 0 to 1.
+export async function uploadPhotos(eventId, files, captions, onProgress) {
   const results = [];
   for (const [i, f] of files.entries()) {
-    const ext = (f.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)?.[1] || 'jpg').toLowerCase();
-    const pathname = `incoming/${eventId}/${Date.now().toString(36)}-${i}.${ext}`;
+    const step = (r) => onProgress((i + r) / files.length);
+    step(0);
     try {
-      const blob = await upload(pathname, f, {
-        access: 'private',
-        handleUploadUrl: '/api/blob-upload',
-        contentType: f.type || undefined,
-        multipart: f.size > 8 * 1024 * 1024,
-        onUploadProgress: (e) => onProgress((done + e.loaded) / total),
-      });
-      done += f.size;
-      onProgress(done / total);
-      const { photo } = await api(`/events/${encodeURIComponent(eventId)}/photos/from-upload`, {
-        method: 'POST', body: { key: blob.pathname, caption: captions[i] || '' },
-      });
-      results.push({ name: f.name, ok: true, photo });
+      const prepared = await prepare(f);
+      const r = await send(eventId, prepared, captions[i], (p) => step(p * 0.9));
+      results.push({ ...r, name: f.name });
     } catch (err) {
-      done += f.size;
       results.push({ name: f.name, ok: false, error: err.message || 'This photo could not be added.' });
     }
+    step(1);
   }
   return { results };
 }
 
-export const roleLabel =(role) => ({ owner: 'Owner', admin: 'Admin', member: 'Member' }[role] || role);
+export const roleLabel = (role) => ({ owner: 'Owner', admin: 'Admin', member: 'Member' }[role] || role);

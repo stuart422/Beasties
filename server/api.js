@@ -5,7 +5,7 @@ import multer from 'multer';
 import { randomBytes } from 'node:crypto';
 import { query, one, tx } from './db.js';
 import { loadUser, requireUser, requireRole, isAdmin, publicUser, login, logout, changePassword } from './auth.js';
-import { processImage, MAX_FILE_BYTES, MAX_FILES, UPLOAD_TYPES } from './images.js';
+import { processImage, MAX_FILE_BYTES, MAX_FILES } from './images.js';
 import * as storage from './storage.js';
 
 export const CAPTION_MAX = 200;
@@ -21,8 +21,6 @@ const tooLong = (v, max) => String(v ?? '').trim().length > max;
 
 /* ---------- Request checks ---------- */
 
-// The Blob upload token route is called by the Blob client library, which sends JSON
-// without our header. It is still same-origin only and needs a signed-in member.
 const sameOrigin = (req) => {
   const origin = req.get('Origin');
   return !origin || new URL(origin).host === req.get('Host');
@@ -30,7 +28,6 @@ const sameOrigin = (req) => {
 api.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD') return next();
   if (!sameOrigin(req)) return fail(res, 403, 'Request refused.');
-  if (req.path === '/blob-upload') return next();
   if (req.get('X-Beasties') !== '1') return fail(res, 403, 'Request refused.');
   next();
 });
@@ -97,6 +94,7 @@ function photoOut(p, user) {
     canUndo: canEdit && !!p.has_history,
     commentsClosed: !!p.comments_closed, commentCount: p.comment_count ?? 0,
     canSetDay: isAdmin(user),
+    canDelete: canEdit,
   };
 }
 const freshPhoto = async (id, user) => photoOut(await one(`${PHOTO_SELECT} WHERE p.id = $1`, [id]), user);
@@ -194,8 +192,19 @@ api.patch('/photos/:id/day', requireRole('admin'), async (req, res) => {
    thumbnail on the server, whichever way it arrives.
    ===================================================================== */
 
-async function addPhoto(e, buffer, caption, user) {
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// The page shrinks photos before upload, which drops the camera date, so it sends the date
+// it read from the original (YYYY-MM-DD) alongside. Only used when the file has none itself.
+function weekdayFrom(taken) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(taken || ''));
+  if (!m) return null;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return Number.isNaN(d.getTime()) ? null : WEEKDAYS[d.getUTCDay()];
+}
+
+async function addPhoto(e, buffer, caption, user, taken) {
   const img = await processImage(buffer);
+  img.weekday = img.weekday || weekdayFrom(taken);
   const base = `${Date.now()}-${randomBytes(5).toString('hex')}`;
   const file = `${e.id}/${base}.jpg`;
   const thumb = `${e.id}/${base}-sm.jpg`;
@@ -208,7 +217,8 @@ async function addPhoto(e, buffer, caption, user) {
   return freshPhoto(row.id, user);
 }
 
-// 1. Direct upload (local development, and small files anywhere): multipart form.
+// Upload: multipart form. The page sends one photo per request, shrunk in the browser
+// to stay under Vercel's 4.5 MB request limit; the server still cleans and resizes it.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES, fields: MAX_FILES + 5, fieldSize: 4096 },
@@ -228,9 +238,10 @@ api.post('/events/:id/photos', requireUser, (req, res, next) => {
       const files = req.files || [];
       if (!files.length) return fail(res, 400, 'Please choose at least one photo.');
       const captions = [].concat(req.body?.captions ?? []);
+      const taken = [].concat(req.body?.taken ?? []);
       const results = [];
       for (const [i, f] of files.entries()) {
-        try { results.push({ name: f.originalname, ok: true, photo: await addPhoto(e, f.buffer, captions[i], req.user) }); }
+        try { results.push({ name: f.originalname, ok: true, photo: await addPhoto(e, f.buffer, captions[i], req.user, taken[i]) }); }
         catch (error) { results.push({ name: f.originalname, ok: false, error: error.message }); }
       }
       res.json({ results });
@@ -238,46 +249,21 @@ api.post('/events/:id/photos', requireUser, (req, res, next) => {
   });
 });
 
-// 2. Vercel: the browser uploads the original straight to a private "incoming/" blob with a
-//    short-lived token from this route (no 4.5 MB function limit), then asks the server to
-//    process it. Tokens are only issued to signed-in members, for incoming/<album>/ paths.
-api.post('/blob-upload', requireUser, async (req, res) => {
-  if (storage.STORAGE !== 'blob') return fail(res, 400, 'Direct uploads are only used with Vercel Blob.');
-  const { handleUpload } = await import('@vercel/blob/client');
-  try {
-    const result = await handleUpload({
-      body: req.body,
-      request: req,
-      onBeforeGenerateToken: async (pathname) => {
-        const m = /^incoming\/([a-z0-9-]+)\/[A-Za-z0-9._-]+$/.exec(pathname);
-        if (!m || !(await eventRow(m[1]))) throw new Error('That upload path is not allowed.');
-        return {
-          allowedContentTypes: UPLOAD_TYPES,
-          maximumSizeInBytes: MAX_FILE_BYTES,
-          addRandomSuffix: true,
-          tokenPayload: JSON.stringify({ userId: req.user.id }),
-        };
-      },
-    });
-    res.json(result);
-  } catch (error) {
-    fail(res, 400, error.message || 'The upload could not start.');
-  }
-});
+/* =====================================================================
+   Delete a photo: the person who added it, or the owner and admins
+   ===================================================================== */
 
-api.post('/events/:id/photos/from-upload', requireUser, async (req, res) => {
-  const e = await eventRow(req.params.id);
-  if (!e) return fail(res, 404, 'That album was not found.');
-  const key = String(req.body?.key || '');
-  if (!key.startsWith(`incoming/${e.id}/`) || !storage.validKey(key)) return fail(res, 400, 'That upload could not be found.');
-  try {
-    const photo = await addPhoto(e, await storage.readAll(key), req.body?.caption, req.user);
-    res.json({ photo });
-  } catch (error) {
-    fail(res, 400, error.message);
-  } finally {
-    await storage.remove(key); // the original never stays in storage
-  }
+api.delete('/photos/:id', requireUser, async (req, res) => {
+  const p = await one('SELECT * FROM photos WHERE id = $1', [Number(req.params.id) || 0]);
+  if (!p) return fail(res, 404, 'That photo was not found.');
+  if (!(isAdmin(req.user) || p.uploader_id === req.user.id)) return fail(res, 403, 'Only the person who added this photo, or an admin, can delete it.');
+  await tx(async (t) => {
+    await t.query("DELETE FROM caption_history WHERE target_type = 'photo' AND target_id = $1", [String(p.id)]);
+    await t.query('DELETE FROM photos WHERE id = $1', [p.id]); // its comments go with it
+  });
+  await storage.remove(p.file);
+  await storage.remove(p.thumb);
+  res.json({ deleted: p.id });
 });
 
 /* =====================================================================

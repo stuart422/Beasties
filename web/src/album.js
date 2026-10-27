@@ -5,7 +5,7 @@ import './styles/main.css';
 import './styles/pages.css';
 
 import { initChrome, isReduced, notify, revealOnScroll } from './chrome.js';
-import { api, uploadPhotos, uploadViaBlob } from './api.js';
+import { api, uploadPhotos } from './api.js';
 
 const CAPTION_MAX = 200;
 const COMMENT_MAX = 280;
@@ -226,6 +226,7 @@ async function showAlbum(id) {
     vimg.alt = p.caption || `A photo from ${event.name}, ${p.day}.`;
     document.getElementById('vcount').textContent = `${at + 1} of ${list.length}`;
     document.getElementById('vdownload').href = `/api/photos/${p.id}/download`;
+    document.getElementById('vdelete').hidden = !p.canDelete;
     renderViewerCaption(startEditing);
     renderViewerMeta();
     loadComments();
@@ -249,6 +250,19 @@ async function showAlbum(id) {
   }
 
   document.getElementById('vclose').addEventListener('click', closeViewer);
+
+  // Delete: the person who added the photo, or the owner and admins. Asks first.
+  document.getElementById('vdelete').addEventListener('click', async () => {
+    const p = current();
+    if (!confirm('Delete this photo for everyone? This cannot be undone.')) return;
+    try {
+      await api(`/photos/${p.id}`, { method: 'DELETE' });
+      photos = photos.filter((x) => x.id !== p.id);
+      closeViewer();
+      renderAll();
+      notify('Photo deleted', `It has been removed from ${event.name}.`);
+    } catch (err) { notify('Photo not deleted', err.message); }
+  });
   for (const [btn, step] of [['vprev', -1], ['vback', -1], ['vnext', 1], ['vfwd', 1]]) {
     document.getElementById(btn).addEventListener('click', () => show(at + step));
   }
@@ -459,9 +473,9 @@ function initUploader(event, onDone) {
     };
     setPct(0);
     try {
-      const { storage } = await api('/config');
-      const sendPhotos = storage === 'blob' ? uploadViaBlob : uploadPhotos;
-      const { results } = await sendPhotos(event.id, files, captions, setPct);
+
+
+      const { results } = await uploadPhotos(event.id, files, captions, setPct);
       const ok = results.filter((r) => r.ok).length;
       const bad = results.filter((r) => !r.ok);
       busy = false;

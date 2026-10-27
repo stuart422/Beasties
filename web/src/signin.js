@@ -34,7 +34,11 @@ form.addEventListener('submit', async (e) => {
     await api('/login', { method: 'POST', body: { email, password } });
     location.href = nextPage();
   } catch (err) {
-    error.textContent = err.message;
+    // Wrong password (401) and too many tries (429) come with their own clear message.
+    // Anything else is a problem on the site, not with the password.
+    error.textContent = err.status === 401 || err.status === 429 ? err.message
+      : err.status === 0 ? err.message
+        : 'We could not check your password because of a problem on the site. Your password may be fine. Please try again in a few minutes.';
     error.hidden = false;
     submit.disabled = false;
     submit.textContent = 'Sign in';

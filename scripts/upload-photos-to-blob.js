@@ -18,10 +18,14 @@ import { approvedPhotos } from '../server/seed.js';
 const ROOT = resolve(import.meta.dirname, '..');
 const REALLY = process.argv.includes('--yes');
 
-if (!process.env.BLOB_READ_WRITE_TOKEN) {
-  console.error('BLOB_READ_WRITE_TOKEN is not set. Put it in .env (see .env.example) and run with --env-file=.env');
+// Works with a read-write token, or with OIDC: BLOB_STORE_ID plus the VERCEL_OIDC_TOKEN that
+// `vercel link` / `vercel env pull` writes to .env.local.
+const oidc = process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN;
+if (!process.env.BLOB_READ_WRITE_TOKEN && !oidc) {
+  console.error('No Blob credentials. Either set BLOB_READ_WRITE_TOKEN, or BLOB_STORE_ID together with VERCEL_OIDC_TOKEN (from `vercel env pull`).');
   process.exit(1);
 }
+console.log(`Signing in to Blob with ${process.env.BLOB_READ_WRITE_TOKEN ? 'a read-write token' : 'Vercel OIDC'}.`);
 
 async function cleanBytes(path) {
   const buf = readFileSync(path);
