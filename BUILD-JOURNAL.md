@@ -1,7 +1,57 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-28-2026 (Assistant: free FAQ mode by default, shipped OFF).
+Last updated: 10-28-2026 (Photo viewer: always-visible info bar).
+
+## Photo viewer info bar (10-28-2026): live
+
+**Why:** Stuart (iPad) saw captions and comments in the album, but not in the full-screen viewer.
+
+### What members see now
+- A slim **cream bar under every full-screen photo**. It is never on top of the photo.
+- It shows, for the photo on screen:
+  - the **caption** (2 lines, then **More** / **Less**)
+  - the **day**
+  - a big **Comments (n)** button, or **Be the first to comment**
+  - **Add a caption** (only for people allowed to edit an empty caption)
+- It changes straight away with the arrows, swipe or arrow keys.
+- The photo uses all the space that is left. It is never cropped or stretched.
+
+### Comments
+- **Comments** opens its own panel: a side panel on wide screens, a bottom sheet on phones.
+- The panel has the list, "Write a short comment" (280 characters, live counter), and Post.
+- People can delete their own comments. The owner and admins can delete any comment and use **Close comments**.
+- **Back to photo** (or Escape) returns to the same photo. The count in the bar updates.
+
+### Details and Hide info
+- **Details** still has Download, caption edit and Undo, and the day (owner and admins).
+- New **Hide info** / **Show info** button in the top bar for the pure photo view.
+  - Shown by default.
+  - This device remembers the choice.
+- Kept as before: Full screen, the counter, Close, big arrows, swipe, Escape, preloading, focus, labels, Reduce motion.
+
+### Tested
+- **Local:** 9 runs, each passing 35 to 37 checks.
+  - Desktop 1440: owner and member.
+  - iPad landscape 1279x889: admin, and owner with View as member.
+  - iPad portrait 889x1279: owner and member.
+  - Phone 390: member, admin, and owner with View as member.
+- **What the checks cover:**
+  - The bar is right for 24 photos in a row.
+  - The comment count matches.
+  - A 200-character caption stays at 2 lines with More, and the photo stays big.
+  - Portrait and wide photos are both whole.
+  - Posting and deleting a comment updates the count.
+  - Escape closes only the panel. Back to photo returns to the same photo.
+  - Hide info is remembered. The gallery scroll position is kept.
+  - Signed out gets 401 on photos. There are no script errors.
+- **Bug found and fixed:** with a side panel open, a long caption was cut off without **More**.
+- **Live:** iPad as owner, phone as a temporary member, desktop as a temporary admin. All passed 32 checks each.
+  - Live never changes captions. The test comment was deleted at once.
+  - The temporary accounts were removed (0 left over). The assistant is still off (404).
+
+### Needs a person
+- A look on Stuart's real iPad.
 
 ## Assistant at zero cost (10-28-2026): FAQ mode by default, shipped OFF
 
