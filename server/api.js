@@ -10,6 +10,7 @@ import {
 } from './auth.js';
 import { processImage, MAX_FILE_BYTES, MAX_FILES } from './images.js';
 import * as storage from './storage.js';
+import { assistantRoute, assistantEnabled } from './assistant.js';
 
 export const CAPTION_MAX = 200;
 export const COMMENT_MAX = 280;
@@ -44,7 +45,8 @@ api.use(requireOwnPassword);
 
 api.post('/login', login);
 api.post('/logout', logout);
-api.get('/me', (req, res) => res.json({ user: publicUser(req.user) }));
+// assistant: true only while ASSISTANT_ENABLED is on, and only for a signed-in member.
+api.get('/me', (req, res) => res.json({ user: publicUser(req.user), ...(req.user && assistantEnabled() ? { assistant: true } : {}) }));
 api.get('/config', requireUser, (req, res) => res.json({ storage: storage.STORAGE, maxFiles: MAX_FILES }));
 api.patch('/me', requireUser, async (req, res) => {
   const name = text(req.body?.name, 60);
@@ -619,6 +621,12 @@ api.delete('/admin/members/:id', requireRole('admin'), async (req, res) => {
   await query('DELETE FROM users WHERE id = $1', [u.id]);
   res.json({ removed: u.id });
 });
+
+/* =====================================================================
+   Beasties Assistant (off unless ASSISTANT_ENABLED=true; see server/assistant.js)
+   ===================================================================== */
+
+api.post('/assistant', assistantRoute);
 
 api.use((req, res) => fail(res, 404, 'Not found.'));
 

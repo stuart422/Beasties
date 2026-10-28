@@ -22,7 +22,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 // Draws the chrome and resolves with the signed-in member (or redirects to sign in).
 export async function initChrome(page) {
-  const { user } = await api('/me');
+  const { user, assistant } = await api('/me');
   if (!user && page !== 'signin') {
     location.href = `/signin.html?next=${encodeURIComponent(location.pathname + location.search)}`;
     return new Promise(() => {});
@@ -97,6 +97,8 @@ export async function initChrome(page) {
     if (b.dataset.view === 'member' && location.pathname.endsWith('/admin.html')) location.href = '/';
     else location.reload();
   });
+  // The Beasties Assistant only loads when the owner has switched it on (ASSISTANT_ENABLED).
+  if (assistant && user) import('./assistant.js').then((m) => m.initAssistant()).catch(() => {});
   // Pages decide what to show from this user: while previewing, a normal member.
   return preview ? { ...user, role: 'member', realRole: user.role, viewingAsMember: true } : user;
 }

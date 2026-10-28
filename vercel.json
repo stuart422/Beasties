@@ -10,7 +10,7 @@
     { "source": "/photos/:path*", "destination": "/api" }
   ],
   "functions": {
-    "api/index.js": { "memory": 1024, "maxDuration": 60 }
+    "api/index.js": { "memory": 1024, "maxDuration": 60, "includeFiles": "server/assistant-knowledge.md" }
   },
   "headers": [
     {

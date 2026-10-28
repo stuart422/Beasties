@@ -14,6 +14,8 @@ if (!SECRET || (PRODUCTION && SECRET.length < 32)) {
   throw new Error('SESSION_SECRET must be set to a random value of at least 32 characters.');
 }
 const tokenHash = (token) => createHmac('sha256', SECRET).update(token).digest('hex');
+// A one-way, keyed hash for anonymous counters (e.g. assistant limits): cannot be traced back.
+export const anonId = (value) => tokenHash(`anon:${value}`).slice(0, 24);
 
 export const ROLE_RANK = { member: 1, admin: 2, owner: 3 };
 export const isAdmin = (user) => !!user && ROLE_RANK[user.role] >= ROLE_RANK.admin;
