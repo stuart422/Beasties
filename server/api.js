@@ -10,7 +10,7 @@ import {
 } from './auth.js';
 import { processImage, MAX_FILE_BYTES, MAX_FILES } from './images.js';
 import * as storage from './storage.js';
-import { assistantRoute, assistantEnabled } from './assistant.js';
+import { assistantRoute, assistantEnabled, assistantProvider } from './assistant.js';
 
 export const CAPTION_MAX = 200;
 export const COMMENT_MAX = 280;
@@ -46,7 +46,7 @@ api.use(requireOwnPassword);
 api.post('/login', login);
 api.post('/logout', logout);
 // assistant: true only while ASSISTANT_ENABLED is on, and only for a signed-in member.
-api.get('/me', (req, res) => res.json({ user: publicUser(req.user), ...(req.user && assistantEnabled() ? { assistant: true } : {}) }));
+api.get('/me', (req, res) => res.json({ user: publicUser(req.user), ...(req.user && assistantEnabled() ? { assistant: true, assistantProvider: assistantProvider() } : {}) }));
 api.get('/config', requireUser, (req, res) => res.json({ storage: storage.STORAGE, maxFiles: MAX_FILES }));
 api.patch('/me', requireUser, async (req, res) => {
   const name = text(req.body?.name, 60);

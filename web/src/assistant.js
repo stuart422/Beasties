@@ -11,7 +11,13 @@ const HISTORY = 6; // turns sent with each question (the server keeps only the l
 const STORE = 'beasties-assistant-chat'; // this tab only, cleared by "Clear chat"
 const SPEAK_PREF = 'beasties-assistant-speak';
 const NOTICE = 'Assistant, can make mistakes. For anything else, ask Stuart.';
+const GEMINI_NOTICE = 'Do not type personal details.';
+// Kept the same as CHIPS in server/assistant-faq.js (scripts/assistant-faq-check.mjs checks this).
 const CHIPS = ['When is the next gathering?', 'How do I add a photo?', 'How do I write a caption?', 'How do I see just the photos?'];
+const MORE_CHIPS = ['What can I ask?', 'How do I sign in?', 'How do I change my password?', 'How do I browse the albums?',
+  'How do I see big photos?', 'How do I show photos from one day?', 'How do I comment on a photo?', 'How do I download a photo?',
+  'What are Random Beastie Sightings?', 'Where are my photos?', 'How do I sign out?', 'What albums are there?',
+  'How do I turn off moving effects?'];
 const HELLO = 'Hello! I can help with the Beasties website and the next gathering. Tap a question below, or type your own.';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -25,7 +31,7 @@ const setPref = (k, on) => { try { localStorage.setItem(k, on ? 'on' : 'off'); }
 let turns = load(STORE, []); // [{ role: 'user' | 'assistant', text }]
 let busy = false;
 
-export function initAssistant() {
+export function initAssistant(provider = 'faq') {
   if (document.getElementById('askBtn')) return;
 
   /* ---------- Button and panel ---------- */
@@ -57,7 +63,7 @@ export function initAssistant() {
     </header>
     <div class="ask__log" id="askLog" role="log" aria-live="polite" aria-relevant="additions text"></div>
     <div class="ask__chips" id="askChips" role="group" aria-label="Suggested questions"></div>
-    <p class="ask__notice">${NOTICE}</p>
+    <p class="ask__notice">${NOTICE}${provider === 'gemini' ? `<br>${GEMINI_NOTICE}` : ''}</p>
     <div class="ask__speaking" id="askSpeaking" hidden>
       <span class="ask__dot" aria-hidden="true"></span><span>Reading the answer aloud</span>
       <button class="ask__stop" type="button" id="askStop">Stop</button>
@@ -106,14 +112,27 @@ export function initAssistant() {
   const scrollDown = () => { log.scrollTop = log.scrollHeight; };
 
   const chips = $('askChips');
-  for (const q of CHIPS) {
+  const chip = (q) => {
     const c = document.createElement('button');
     c.type = 'button';
     c.className = 'ask__chip';
     c.textContent = q;
     c.addEventListener('click', () => { unlockSpeech(); ask(q); });
-    chips.append(c);
-  }
+    return c;
+  };
+  for (const q of CHIPS) chips.append(chip(q));
+  // "More questions" opens the rest of the list in place.
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'ask__chip ask__chip--more';
+  more.textContent = 'More questions';
+  more.setAttribute('aria-expanded', 'false');
+  more.addEventListener('click', () => {
+    more.replaceWith(...MORE_CHIPS.map(chip));
+    chips.classList.add('is-open');
+    chips.querySelectorAll('.ask__chip')[CHIPS.length]?.focus();
+  });
+  chips.append(more);
 
   /* ---------- Asking ---------- */
   async function ask(asked) {

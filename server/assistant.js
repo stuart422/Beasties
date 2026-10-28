@@ -1,17 +1,21 @@
 // Beasties Assistant: a small question-and-answer helper for signed-in members.
 //
 // OFF unless ASSISTANT_ENABLED is "true". When off, POST /api/assistant is a 404 and the
-// page shows no button. The only context sent to the AI is server/assistant-knowledge.md:
+// page shows no button. ASSISTANT_PROVIDER picks who answers: "faq" (the default, free,
+// answered on the server from the knowledge file, nothing leaves it), "gemini" (free tier,
+// falls back to FAQ on any failure) or "anthropic" (paid).
+// The only context sent to an AI is server/assistant-knowledge.md:
 // never photos, captions, comments, member names or emails. Message text is never logged
 // or stored; the database keeps anonymous counters only (see migration 004).
 import { readFileSync } from 'node:fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { query, one } from './db.js';
 import { anonId, PRODUCTION } from './auth.js';
+import { faqAnswer } from './assistant-faq.js';
 
 export const assistantEnabled = () => /^(1|true|yes|on)$/i.test(String(process.env.ASSISTANT_ENABLED || '').trim());
 
-const MODEL = () => process.env.ASSISTANT_MODEL || 'claude-haiku-5-5';
+const MODEL = () => (assistantProvider() === 'anthropic' && process.env.ASSISTANT_MODEL) || 'claude-haiku-5-5';
 const positive = (v, fallback) => (Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : fallback);
 const MONTHLY_CAP = () => positive(process.env.ASSISTANT_MONTHLY_MESSAGE_CAP, 1500);
 export const LIMITS = { perHour: 20, perDay: 100, maxChars: 500, historyTurns: 6, timeoutMs: 30_000 };
@@ -108,12 +112,60 @@ function client() {
   });
 }
 
+
+/* ---------- Gemini (optional, free tier) ---------- */
+
+const GEMINI_MODEL = () => (assistantProvider() === 'gemini' && process.env.ASSISTANT_MODEL) || 'gemini-3.5-flash-lite';
+
+// The Gemini request: the same system prompt and knowledge, the same short history.
+export function buildGeminiRequest(message, history = []) {
+  return {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [...cleanHistory(history), { role: 'user', content: message }]
+      .map((t) => ({ role: t.role === 'assistant' ? 'model' : 'user', parts: [{ text: t.content }] })),
+    generationConfig: { maxOutputTokens: 800 },
+  };
+}
+
+// Returns the answer text, or null for anything that should fall back to FAQ mode
+// (no key, free limit reached, blocked, empty answer, timeout or any other error).
+async function geminiAnswer(message, history, signal) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  const base = (!PRODUCTION && process.env.ASSISTANT_API_BASE_URL) || 'https://generativelanguage.googleapis.com';
+  try {
+    const r = await fetch(`${base}/v1beta/models/${encodeURIComponent(GEMINI_MODEL())}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(buildGeminiRequest(message, history)),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
+    });
+    if (!r.ok) { console.error('[assistant] gemini failed:', r.status); return null; }
+    const data = await r.json();
+    if (data.promptFeedback?.blockReason) return null;
+    const cand = data.candidates?.[0];
+    const text = (cand?.content?.parts || []).filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('').trim();
+    if (!text || /SAFETY|PROHIBITED|BLOCKLIST|SPII|RECITATION/.test(cand?.finishReason || '')) return null;
+    return cand.finishReason === 'MAX_TOKENS' ? `${text} …` : text;
+  } catch (err) {
+    if (!signal.aborted) console.error('[assistant] gemini failed:', err?.name || 'error');
+    return null;
+  }
+}
+
 /* ---------- POST /api/assistant ---------- */
+
+// "faq" (the default: free, nothing leaves the server), "gemini" or "anthropic".
+export const assistantProvider = () => {
+  const p = String(process.env.ASSISTANT_PROVIDER || '').trim().toLowerCase();
+  return p === 'gemini' || p === 'anthropic' ? p : 'faq';
+};
 
 export async function assistantRoute(req, res) {
   if (!assistantEnabled()) return res.status(404).json({ error: 'Not found.' });
   if (!req.user) return res.status(401).json({ error: 'Please sign in.' });
-  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'The assistant is not set up yet. Please ask Stuart.' });
+  const provider = assistantProvider();
+  if (provider === 'anthropic' && !process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'The assistant is not set up yet. Please ask Stuart.' });
 
   const message = String(req.body?.message ?? '').trim();
   if (!message) return res.status(400).json({ error: 'Please type a question first.' });
@@ -127,23 +179,31 @@ export async function assistantRoute(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Accel-Buffering', 'no');
 
-  // Site-wide monthly cap: answer kindly without calling the AI.
+  // Site-wide monthly cap: answer kindly without calling anything.
   if (await monthlyCount() >= MONTHLY_CAP()) {
     res.setHeader('X-Assistant-Status', 'resting');
     return res.status(200).end(RESTING);
   }
 
-  // Count before calling, so a burst of clicks cannot slip past the limits.
+  // Count before answering, so a burst of clicks cannot slip past the limits.
   await bump(`h:${who}`, 60);
   await bump(`d:${who}`, 24 * 60);
   await addUsage(`day:${ymd()}`);
   await addUsage(`month:${ym()}`);
   query('DELETE FROM assistant_limits WHERE until < now()').catch(() => {});
 
-  const params = buildRequest(message, req.body?.history);
-
   const abort = new AbortController();
   res.on('close', () => { if (!res.writableEnded) abort.abort(); });
+
+  if (provider === 'faq') return res.end(faqAnswer(message).answer);
+  if (provider === 'gemini') {
+    const text = await geminiAnswer(message, req.body?.history, abort.signal);
+    if (abort.signal.aborted) return;
+    if (text === null) res.setHeader('X-Assistant-Status', 'faq');
+    return res.end(text ?? faqAnswer(message).answer);
+  }
+
+  const params = buildRequest(message, req.body?.history);
   let wrote = false;
   try {
     const stream = client().messages.stream(params, { signal: abort.signal });

@@ -17,7 +17,8 @@ async function connect() {
   if (IS_LOCAL_DB) {
     mkdirSync(DATA_DIR, { recursive: true });
     const { PGlite } = await import('@electric-sql/pglite');
-    const pg = await PGlite.create(resolve(DATA_DIR, 'pglite'));
+    // PGLITE_DIR lets a second local copy run beside the normal one (tests); local only.
+    const pg = await PGlite.create(process.env.PGLITE_DIR || resolve(DATA_DIR, 'pglite'));
     driver = {
       query: (text, params) => pg.query(text, params),
       transaction: (fn) => pg.transaction((t) => fn((text, params) => t.query(text, params))),

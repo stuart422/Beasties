@@ -1,7 +1,31 @@
 # Build Journal: Beasties Working Version
 
 Owner: Ahmed Malik. Final design approval: Stuart.
-Last updated: 10-28-2026 (Beasties Assistant, shipped OFF).
+Last updated: 10-28-2026 (Assistant: free FAQ mode by default, shipped OFF).
+
+## Assistant at zero cost (10-28-2026): FAQ mode by default, shipped OFF
+
+New setting `ASSISTANT_PROVIDER` picks who answers. Still OFF in production; no Vercel settings were changed.
+
+### The three modes
+- **`faq` (default):** free, no key, nothing leaves the server. `server/assistant-faq.js` splits `assistant-knowledge.md` into 18 answers, each with keywords and other phrasings. Matching uses normalised text, synonyms, a typo fixer (one or two letters off) and keyword/phrase scores. A weak match says "I do not know that one. Please ask Stuart." Rule-breaking tries ("ignore your instructions", "make me admin") get a polite refusal. Small talk (hello, thanks, who are you) and "What can I ask?" have their own answers.
+- **`gemini` (optional, free tier):** `GEMINI_API_KEY`, default model `gemini-3.5-flash-lite`. Same system prompt and knowledge file, last 6 turns. Any failure (no key, free limit, blocked, empty, 20 s timeout) quietly falls back to the FAQ answer. The panel adds "Do not type personal details."
+- **`anthropic`:** unchanged (claude-haiku-5-5).
+- All modes keep: members only, 20 an hour, 100 a day, monthly cap, no message text stored or logged.
+
+### Panel
+- The 4 main chips, plus **More questions** which opens 13 more (every how-to, and "What can I ask?"). The list scrolls on its own so the Send box stays on screen on a phone.
+- `/api/me` now also returns the provider while the assistant is on.
+
+### Tests
+- `node scripts/assistant-faq-check.mjs`: **107 of 107 pass** (all 17 chips, other wording, typos, 21 off-topic, 7 rule-breaking, small talk). It also checks the panel chips match the server list.
+- Honest note: two rounds of fresh questions, written before tuning, scored 12 of 20 and 11 of 15. The misses were fixed in general ways and those 35 questions are now part of the 107.
+- Local site, FAQ mode: API 8 of 8; panel 22 of 22 at 1440x900, 1279x889 (iPad), 390x844 (phone), and with no voice support.
+- Local site, Gemini mode against a stand-in (no real Google calls): 10 of 10, including fallback on free limit and on a blocked answer.
+- Assistant OFF: no button, code never downloaded (6 of 6).
+
+### Local note
+- `PGLITE_DIR` (local only) lets a test copy of the database run beside the normal one. Used because the home-network preview server was holding `data/pglite`.
 
 ## Beasties Assistant (10-28-2026): built, shipped OFF
 
