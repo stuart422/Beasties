@@ -109,17 +109,25 @@
   </div>
 </div>
 
-<!-- Full-screen photo viewer: the photo fills the screen. "Details" opens caption, day,
-     Download and Comments in a solid panel (side panel on wide screens, bottom sheet on phones). -->
+<!-- Full-screen photo viewer: the photo fills the space above a slim info bar (caption, day,
+     Comments). "Details" (Download, caption edit, day) and "Comments" open in a solid panel:
+     a side panel on wide screens, a bottom sheet on phones. "Hide info" hides the bar. -->
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
   <div class="viewer__photo" id="vphoto">
-    <div class="viewer__stage"><img id="vimg" alt="" decoding="async"></div>
+    <div class="viewer__frame">
+      <div class="viewer__stage"><img id="vimg" alt="" decoding="async"></div>
+      <button class="viewer__arrow viewer__arrow--prev" type="button" id="vprev" aria-label="Previous photo"><span class="chev chev--left" aria-hidden="true"></span></button>
+      <button class="viewer__arrow viewer__arrow--next" type="button" id="vnext" aria-label="Next photo"><span class="chev" aria-hidden="true"></span></button>
+    </div>
 
     <div class="viewer__top">
       <p class="viewer__pill" id="vcount" aria-live="polite"></p>
       <div class="viewer__tools">
         <button class="vbtn" type="button" id="vdetails" aria-expanded="false" aria-controls="vside">
           <span class="vbtn__icon vbtn__icon--info" aria-hidden="true"></span><span class="vbtn__text">Details</span>
+        </button>
+        <button class="vbtn" type="button" id="vinfoToggle" aria-expanded="true" aria-controls="vinfo">
+          <span class="vbtn__icon vbtn__icon--bar" aria-hidden="true"></span><span class="vbtn__text">Hide info</span>
         </button>
         <button class="vbtn" type="button" id="vfull" hidden>
           <span class="vbtn__icon vbtn__icon--full" aria-hidden="true"></span><span class="vbtn__text" id="vfullText">Full screen</span>
@@ -130,8 +138,18 @@
       </div>
     </div>
 
-    <button class="viewer__arrow viewer__arrow--prev" type="button" id="vprev" aria-label="Previous photo"><span class="chev chev--left" aria-hidden="true"></span></button>
-    <button class="viewer__arrow viewer__arrow--next" type="button" id="vnext" aria-label="Next photo"><span class="chev" aria-hidden="true"></span></button>
+    <!-- Info bar: always about the photo on screen. Solid, never over the photo. -->
+    <section class="vinfo" id="vinfo" aria-label="About this photo">
+      <div class="vinfo__text">
+        <p class="vinfo__cap" id="vinfoCap"></p>
+        <div class="vinfo__links">
+          <button class="cap-link vinfo__more" type="button" id="vinfoMore" aria-expanded="false" hidden>More</button>
+          <button class="cap-link vinfo__add" type="button" id="vinfoAdd" hidden>Add a caption</button>
+          <p class="vinfo__day" id="vinfoDay"></p>
+        </div>
+      </div>
+      <button class="vinfo__comments" type="button" id="vinfoComments" aria-expanded="false" aria-controls="vcomments"></button>
+    </section>
   </div>
 
   <aside class="viewer__side" id="vside" aria-labelledby="vsideTitle" hidden>
@@ -151,10 +169,15 @@
       <a class="text-link viewer__download" id="vdownload" href="#" download><span>Download</span></a>
       <button class="cap-link viewer__delete" type="button" id="vdelete" hidden>Delete this photo</button>
     </div>
+  </aside>
 
-    <section class="comments" aria-labelledby="cTitle">
+  <aside class="viewer__side" id="vcomments" aria-labelledby="cTitle" hidden>
+    <section class="comments comments--panel">
       <div class="comments__head">
         <h2 class="comments__title" id="cTitle">Comments</h2>
+        <button class="btn btn--quiet btn--small" type="button" id="vcommentsClose">Back to photo</button>
+      </div>
+      <div class="comments__head">
         <label class="close-switch" id="cCloseWrap" hidden>
           <input type="checkbox" id="cClose"> Close comments
         </label>

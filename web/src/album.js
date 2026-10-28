@@ -324,12 +324,20 @@ async function showAlbum(id) {
 
   /* ---------- Full-screen viewer ---------- */
 
-  // The photo fills the screen. "Details" opens caption, day, Download and Comments in a solid
-  // panel; this device remembers whether it was open (closed by default).
+  // The photo fills the space above a slim info bar (caption, day, Comments) for the photo on
+  // screen. "Details" (Download, caption edit, day) and "Comments" open in a solid panel, one at
+  // a time. This device remembers whether Details was open (closed by default) and whether the
+  // info bar was hidden (shown by default).
   const viewer = document.getElementById('viewer');
   const vimg = document.getElementById('vimg');
   const vside = document.getElementById('vside');
+  const vcomments = document.getElementById('vcomments');
   const detailsBtn = document.getElementById('vdetails');
+  const vinfo = document.getElementById('vinfo');
+  const infoToggle = document.getElementById('vinfoToggle');
+  const infoCap = document.getElementById('vinfoCap');
+  const infoMore = document.getElementById('vinfoMore');
+  const infoComments = document.getElementById('vinfoComments');
   let at = 0;
   let opener = null;
   let savedScroll = 0;
@@ -337,9 +345,16 @@ async function showAlbum(id) {
   const DETAILS_KEY = 'beasties-viewer-details';
   const detailsWanted = () => { try { return localStorage.getItem(DETAILS_KEY) === 'open'; } catch { return false; } };
 
+  const INFO_KEY = 'beasties-viewer-info';
+  const infoWanted = () => { try { return localStorage.getItem(INFO_KEY) !== 'hidden'; } catch { return true; } };
+
+  // A side panel makes the info bar narrower, so check again whether the caption needs "More".
+  const syncPanels = () => { viewer.classList.toggle('has-panel', !vside.hidden || !vcomments.hidden); fitCaption(); };
+
   function setDetails(open, remember = true) {
+    if (open) setComments(false);
     vside.hidden = !open;
-    viewer.classList.toggle('has-details', open);
+    syncPanels();
     detailsBtn.setAttribute('aria-expanded', String(open));
     detailsBtn.querySelector('.vbtn__text').textContent = open ? 'Hide details' : 'Details';
     if (remember) { try { localStorage.setItem(DETAILS_KEY, open ? 'open' : 'closed'); } catch {} }
@@ -350,6 +365,71 @@ async function showAlbum(id) {
     if (open) document.getElementById('vsideClose').focus();
   });
   document.getElementById('vsideClose').addEventListener('click', () => { setDetails(false); detailsBtn.focus(); });
+
+  function setComments(open) {
+    if (open && !vside.hidden) setDetails(false, false);
+    vcomments.hidden = !open;
+    infoComments.setAttribute('aria-expanded', String(open));
+    syncPanels();
+  }
+  function openComments() {
+    setComments(true);
+    // straight to the comment box (or the panel's button, when comments are closed)
+    if (!cForm.hidden) cBody.focus({ preventScroll: true });
+    else document.getElementById('vcommentsClose').focus();
+  }
+  // Closing the panel goes back to the same photo, focus on the Comments button.
+  function closeComments() {
+    setComments(false);
+    (vinfo.hidden ? document.getElementById('vclose') : infoComments).focus();
+  }
+  infoComments.addEventListener('click', () => (vcomments.hidden ? openComments() : closeComments()));
+  document.getElementById('vcommentsClose').addEventListener('click', closeComments);
+
+  function setInfo(shown, remember = true) {
+    vinfo.hidden = !shown;
+    infoToggle.setAttribute('aria-expanded', String(shown));
+    infoToggle.querySelector('.vbtn__text').textContent = shown ? 'Hide info' : 'Show info';
+    if (remember) { try { localStorage.setItem(INFO_KEY, shown ? 'shown' : 'hidden'); } catch {} }
+    if (shown) fitCaption();
+  }
+  infoToggle.addEventListener('click', () => setInfo(vinfo.hidden));
+
+  /* Info bar for the photo on screen */
+  const commentTotal = new Map(); // photo id -> number of comments, filled as they load
+  function commentLabel(p) {
+    const n = commentTotal.get(p.id) ?? p.commentCount ?? 0;
+    return n ? `Comments (${n})` : p.commentsClosed ? 'Comments (0)' : 'Be the first to comment';
+  }
+  function renderInfo() {
+    const p = current();
+    infoCap.textContent = p.caption || '';
+    vinfo.classList.remove('is-open');
+    infoMore.textContent = 'More';
+    infoMore.setAttribute('aria-expanded', 'false');
+    document.getElementById('vinfoAdd').hidden = !!p.caption || !p.canEdit;
+    document.getElementById('vinfoDay').textContent = p.day !== DAY_NOT_SET ? p.day : '';
+    infoComments.textContent = commentLabel(p);
+    fitCaption();
+  }
+  // "More" only when the caption is longer than 2 lines.
+  function fitCaption() {
+    requestAnimationFrame(() => {
+      if (vinfo.classList.contains('is-open')) return;
+      infoMore.hidden = !infoCap.textContent || infoCap.scrollHeight <= infoCap.clientHeight + 2;
+    });
+  }
+  infoMore.addEventListener('click', () => {
+    const open = !vinfo.classList.contains('is-open');
+    vinfo.classList.toggle('is-open', open);
+    infoMore.textContent = open ? 'Less' : 'More';
+    infoMore.setAttribute('aria-expanded', String(open));
+  });
+  document.getElementById('vinfoAdd').addEventListener('click', () => {
+    setDetails(true, false);
+    renderViewerCaption(true);
+  });
+  window.addEventListener('resize', () => { if (!viewer.hidden) fitCaption(); });
 
   function replacePhoto(updated) {
     photos = photos.map((p) => (p.id === updated.id ? updated : p));
@@ -362,7 +442,7 @@ async function showAlbum(id) {
       text: p.caption, canEdit: p.canEdit, canUndo: p.canUndo, label: 'Caption for this photo', startEditing,
       save: async (t) => { replacePhoto((await api(`/photos/${p.id}/caption`, { method: 'PATCH', body: { text: t } })).photo); },
       undo: async () => { replacePhoto((await api(`/photos/${p.id}/caption/undo`, { method: 'POST' })).photo); },
-      after: () => { renderViewerCaption(); renderWall(); },
+      after: () => { renderViewerCaption(); renderInfo(); renderWall(); },
     });
   }
 
@@ -412,6 +492,7 @@ async function showAlbum(id) {
     document.getElementById('vdelete').hidden = !p.canDelete;
     renderViewerCaption(startEditing);
     renderViewerMeta();
+    renderInfo();
     loadComments();
     if (startEditing) setDetails(true, false);
     // fetch the neighbours ahead of time so Next and Previous feel instant
@@ -421,16 +502,15 @@ async function showAlbum(id) {
   function openViewer(k, from, startEditing = false, toComments = false) {
     opener = from;
     savedScroll = window.scrollY;
-    setDetails(startEditing || toComments || detailsWanted(), false);
+    setComments(false);
+    setDetails(startEditing || (!toComments && detailsWanted()), false);
+    setInfo(infoWanted(), false);
     show(k, startEditing);
     viewer.hidden = false;
     document.documentElement.classList.add('is-locked');
-    if (toComments) {
-      // straight to the comment box (or the comments, when they are closed)
-      const box = document.getElementById('cBody');
-      document.getElementById('cTitle').scrollIntoView({ block: 'start' });
-      if (!document.getElementById('cForm').hidden) box.focus({ preventScroll: true });
-    } else if (!startEditing) document.getElementById('vclose').focus();
+    fitCaption();
+    if (toComments) openComments();
+    else if (!startEditing) document.getElementById('vclose').focus();
   }
 
   function closeViewer() {
@@ -486,7 +566,7 @@ async function showAlbum(id) {
   }
   document.addEventListener('keydown', (e) => {
     if (viewer.hidden || e.target.closest?.('textarea, select, input')) return;
-    if (e.key === 'Escape') closeViewer();
+    if (e.key === 'Escape') { if (!vcomments.hidden) closeComments(); else closeViewer(); }
     if (e.key === 'ArrowLeft') show(at - 1);
     if (e.key === 'ArrowRight') show(at + 1);
     if (e.key === 'Tab') trapFocus(e, viewer);
@@ -494,7 +574,7 @@ async function showAlbum(id) {
   // Swipe left or right on phones and tablets.
   let sx = null;
   let sy = 0;
-  const vphoto = document.getElementById('vphoto');
+  const vphoto = viewer.querySelector('.viewer__frame');
   vphoto.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' || e.target.closest('button')) return;
     sx = e.clientX;
@@ -519,6 +599,11 @@ async function showAlbum(id) {
   let commentsFor = null;
 
   function renderComments({ comments, closed, canClose }) {
+    const p = current();
+    commentTotal.set(p.id, comments.length);
+    if (albumComments) albumComments[p.id] = comments;
+    replacePhoto({ ...p, commentsClosed: closed });
+    infoComments.textContent = commentLabel(current());
     cList.innerHTML = '';
     if (!comments.length) {
       const li = document.createElement('li');
