@@ -27,7 +27,8 @@ export function createApp() {
       if (!req.user) return res.status(401).end();
       if (req.user.must_change_password) return res.status(403).end(); // choose a password first
       const key = [].concat(req.params.path).join('/');
-      if (key.startsWith('incoming/')) return res.status(404).end();
+      // uploads in progress and event documents are never served here (documents: server/documents.js)
+      if (key.startsWith('incoming/') || key.startsWith('docs/')) return res.status(404).end();
       const f = await storage.open(key);
       if (!f) return res.status(404).end();
       res.setHeader('Content-Type', f.contentType || 'image/jpeg');

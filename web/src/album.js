@@ -678,6 +678,167 @@ async function showAlbum(id) {
 
   initTilt(wall);
   renderAll();
+  initDocument(event);
+}
+
+/* =====================================================================
+   Event document (itinerary): one per event. Members open it; owner and admins manage it.
+   ===================================================================== */
+
+const DOC_MAX_BYTES = 25 * 1024 * 1024;
+const DESC_MAX = 300;
+
+async function initDocument(event) {
+  const id = event.id;
+  const path = `/events/${encodeURIComponent(id)}/document`;
+  const $ = (x) => document.getElementById(x);
+  const card = $('docCard');
+  const sheet = $('docSheet');
+  const form = $('docForm');
+  const errorEl = $('docError');
+  let doc = null;
+  let canManage = false;
+
+  function render() {
+    const has = !!doc;
+    card.hidden = !has;
+    $('docAdd').hidden = has || !canManage;
+    $('docAdd').textContent = 'Add an itinerary';
+    if (!has) return;
+    $('docState').hidden = true;
+    $('docName').textContent = doc.title;
+    $('docDesc').textContent = doc.description;
+    $('docDesc').hidden = !doc.description;
+    const itinerary = /itinerar/i.test(doc.title);
+    $('docKicker').textContent = itinerary ? 'Itinerary' : 'Event document';
+    const open = $('docOpen');
+    open.href = doc.href;
+    open.rel = doc.kind === 'link' ? 'noopener noreferrer' : 'noopener';
+    open.toggleAttribute('download', doc.kind === 'docx');
+    if (doc.kind === 'docx') open.removeAttribute('target'); else open.target = '_blank';
+    const where = doc.kind === 'link' ? (doc.provider === 'google' ? 'Google Docs' : 'Microsoft Word') : '';
+    open.textContent = doc.kind === 'pdf' ? (itinerary ? 'View Itinerary' : 'Open document')
+      : doc.kind === 'docx' ? 'Open in Word' : `Open in ${where}`;
+    $('docHelp').textContent = doc.kind === 'pdf' ? 'Opens in a new tab. Tap a heading in the contents to jump to it.'
+      : doc.kind === 'docx' ? 'Downloads the Word file. Open it in Word to use its contents links.'
+        : `Opens in ${where} in a new tab. You may need to sign in there.`;
+    $('docNote').textContent = canManage ? doc.note : '';
+    $('docNote').hidden = !canManage || !doc.note;
+    $('docAdmin').hidden = !canManage;
+  }
+
+  try {
+    ({ document: doc, canManage } = await api(path));
+    render();
+  } catch (err) {
+    // Members only see an itinerary when there is one, so say plainly that it could not load.
+    card.hidden = false;
+    for (const x of ['docName', 'docDesc', 'docOpen', 'docHelp']) $(x).hidden = true;
+    $('docKicker').textContent = 'Itinerary';
+    $('docState').textContent = 'The itinerary could not be loaded just now. Please refresh the page to try again.';
+    $('docState').hidden = false;
+    return;
+  }
+
+  /* ---------- Owner and admins: add, replace, remove ---------- */
+
+  const mode = () => form.querySelector('input[name="docMode"]:checked').value;
+  function showMode() {
+    $('docFileWrap').hidden = mode() !== 'file';
+    $('docLinkWrap').hidden = mode() !== 'link';
+  }
+  form.addEventListener('change', (e) => { if (e.target.name === 'docMode') { showMode(); showError(''); } });
+  $('docDescIn').addEventListener('input', () => { $('docDescCount').textContent = `${$('docDescIn').value.length} / ${DESC_MAX}`; });
+  const showError = (msg) => { errorEl.textContent = msg; errorEl.hidden = !msg; };
+
+  let opener = null;
+  function openSheet(from) {
+    opener = from;
+    showError('');
+    form.reset();
+    $('docTitleIn').value = doc?.title || `${event.name} Itinerary`;
+    $('docDescIn').value = doc?.description || '';
+    $('docDescCount').textContent = `${$('docDescIn').value.length} / ${DESC_MAX}`;
+    $('docKeepWrap').hidden = !doc;
+    form.querySelector(`input[value="${doc ? 'details' : 'file'}"]`).checked = true;
+    if (doc?.kind === 'link') $('docUrl').value = doc.href;
+    $('docSheetTitle').textContent = doc ? 'Replace or edit the document' : 'Add an itinerary';
+    showMode();
+    sheet.hidden = false;
+    document.documentElement.classList.add('is-locked');
+    $('docTitleIn').focus();
+  }
+  function closeSheet() {
+    sheet.hidden = true;
+    document.documentElement.classList.remove('is-locked');
+    opener?.focus();
+  }
+  $('docAdd').addEventListener('click', (e) => openSheet(e.currentTarget));
+  $('docEdit').addEventListener('click', (e) => openSheet(e.currentTarget));
+  $('docSheetClose').addEventListener('click', closeSheet);
+  sheet.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); if (e.key === 'Tab') trapFocus(e, sheet); });
+
+  // Saves through the API; large files on the live site go straight to private storage first.
+  async function send(fields, file) {
+    const body = new FormData();
+    for (const [k, v] of Object.entries(fields)) body.append(k, v);
+    if (file) {
+      const { storage } = await api('/config');
+      if (storage === 'blob') {
+        const { upload } = await import('@vercel/blob/client');
+        const ext = file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'pdf';
+        const key = `incoming/docs/${id}-${Math.random().toString(36).slice(2, 12).replace(/[^a-z0-9]/g, '') || 'x'}.${ext}`;
+        await upload(key, file, { access: 'private', handleUploadUrl: `/api${path}/upload-token`, headers: { 'X-Beasties': '1' }, multipart: file.size > 4 * 1024 * 1024 });
+        body.append('incomingKey', key);
+        body.append('fileName', file.name);
+      } else body.append('file', file);
+    }
+    let res;
+    try { res = await fetch(`/api${path}`, { method: 'PUT', credentials: 'same-origin', headers: { 'X-Beasties': '1' }, body }); } catch { throw new Error('The site could not be reached. Please check your internet connection and try again.'); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(res.status >= 500 ? 'The site is having a problem right now. Please try again in a few minutes.' : data.error || 'The document could not be saved.');
+    return data;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showError('');
+    const title = $('docTitleIn').value.trim();
+    if (!title) { showError('Please give the document a title, for example "Foliage 2026 Itinerary".'); $('docTitleIn').focus(); return; }
+    const m = mode();
+    const file = $('docFile').files[0];
+    if (m === 'file') {
+      if (!file) { showError('Please choose a PDF or Word (.docx) file.'); return; }
+      if (!/\.(pdf|docx)$/i.test(file.name)) { showError('Please choose a PDF or a Word (.docx) file. Older Word files (.doc) need to be saved as .docx first.'); return; }
+      if (file.size > DOC_MAX_BYTES) { showError('The file must be under 25 MB.'); return; }
+    }
+    if (m === 'link' && !/^https:\/\//i.test($('docUrl').value.trim())) { showError('Please paste a Google Docs or Microsoft Word sharing link (it starts with https://).'); return; }
+    $('docSave').disabled = true;
+    $('docProgress').hidden = false;
+    try {
+      const data = await send({ mode: m, title, description: $('docDescIn').value.trim(), url: $('docUrl').value.trim() }, m === 'file' ? file : null);
+      doc = data.document;
+      render();
+      closeSheet();
+      notify(data.message, doc.note || 'Members can open it from this page now.');
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      $('docSave').disabled = false;
+      $('docProgress').hidden = true;
+    }
+  });
+
+  $('docRemove').addEventListener('click', async () => {
+    if (!confirm(`Remove "${doc.title}" from ${event.name}? Members will no longer see it.`)) return;
+    try {
+      await api(path, { method: 'DELETE' });
+      doc = null;
+      render();
+      notify('Document removed', 'You can add a new one at any time.');
+      $('docAdd').focus();
+    } catch (err) { notify('Not removed', err.message); }
+  });
 }
 
 /* =====================================================================

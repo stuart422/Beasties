@@ -31,9 +31,26 @@
         <h1 class="album-title" id="albumTitle"></h1>
         <p class="album-meta" id="albumMeta"></p>
         <div class="cap-block cap-block--album" id="albumCap"></div>
+        <!-- The event's itinerary or document, when there is one (see server/documents.js) -->
+        <section class="doc-card" id="docCard" aria-labelledby="docName" hidden>
+          <p class="doc-card__kicker" id="docKicker">Event document</p>
+          <h2 class="doc-card__title" id="docName"></h2>
+          <p class="doc-card__desc" id="docDesc"></p>
+          <p class="doc-card__state" id="docState" role="status" hidden></p>
+          <div class="doc-card__row">
+            <a class="btn btn--forest doc-card__open" id="docOpen" target="_blank" rel="noopener"></a>
+            <p class="doc-card__help" id="docHelp"></p>
+          </div>
+          <p class="doc-card__note" id="docNote" hidden></p>
+          <div class="doc-card__admin" id="docAdmin" hidden>
+            <button class="btn btn--quiet btn--small" type="button" id="docEdit">Replace or edit</button>
+            <button class="cap-link doc-card__remove" type="button" id="docRemove">Remove</button>
+          </div>
+        </section>
         <div class="album-actions">
           <button class="btn btn--forest" type="button" id="albumAdd"><span class="plus" aria-hidden="true"></span>Add photos</button>
           <button class="btn btn--quiet" type="button" id="arrangeBtn" hidden>Arrange photos</button>
+          <button class="btn btn--quiet" type="button" id="docAdd" hidden>Add an itinerary</button>
         </div>
       </div>
     </section>
@@ -84,6 +101,45 @@
 </main>
 
 <div id="foot"></div>
+
+<!-- Add, replace or edit the event document (owner and admins) -->
+<div class="sheet" id="docSheet" role="dialog" aria-modal="true" aria-labelledby="docSheetTitle" hidden>
+  <div class="sheet__panel">
+    <div class="sheet__head">
+      <h2 class="sheet__title" id="docSheetTitle">Itinerary</h2>
+      <button class="btn btn--quiet btn--small" type="button" id="docSheetClose">Close</button>
+    </div>
+    <form class="doc-form" id="docForm" novalidate>
+      <label class="field">
+        <span class="field__label">Title</span>
+        <input class="field__input" id="docTitleIn" maxlength="80" placeholder="For example: Foliage 2026 Itinerary" autocomplete="off">
+      </label>
+      <label class="field">
+        <span class="field__label">Short description (optional)</span>
+        <textarea class="cap-input" id="docDescIn" rows="2" maxlength="300" aria-describedby="docDescCount"></textarea>
+        <span class="field__hint" id="docDescCount">0 / 300</span>
+      </label>
+      <fieldset class="doc-form__choice">
+        <legend class="field__label">The document</legend>
+        <label class="doc-form__option" id="docKeepWrap" hidden><input type="radio" name="docMode" value="details"> Keep the current document, change only the title and description</label>
+        <label class="doc-form__option"><input type="radio" name="docMode" value="file" checked> Upload a PDF or Word (.docx) file</label>
+        <label class="doc-form__option"><input type="radio" name="docMode" value="link"> Add a Google Docs or Microsoft Word link</label>
+      </fieldset>
+      <div class="field" id="docFileWrap">
+        <input class="doc-form__file" type="file" id="docFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <span class="field__hint">PDF or Word (.docx), up to 25 MB. PDFs keep their clickable contents.</span>
+      </div>
+      <label class="field" id="docLinkWrap" hidden>
+        <span class="field__label">Sharing link</span>
+        <input class="field__input" id="docUrl" type="url" inputmode="url" placeholder="https://docs.google.com/..." autocomplete="off">
+        <span class="field__hint">Share the document with the Beasties in Google or Microsoft first. This site cannot change who can see it there.</span>
+      </label>
+      <p class="form-error" id="docError" role="alert" hidden></p>
+      <div class="up-progress" id="docProgress" hidden><p class="up-progress__text" aria-live="polite">Saving…</p></div>
+      <div class="sheet__foot"><button class="btn btn--forest" type="submit" id="docSave">Save</button></div>
+    </form>
+  </div>
+</div>
 
 <!-- Add photos -->
 <div class="sheet" id="uploader" role="dialog" aria-modal="true" aria-labelledby="upTitle" hidden>

@@ -11,6 +11,7 @@ import {
 import { processImage, MAX_FILE_BYTES, MAX_FILES } from './images.js';
 import * as storage from './storage.js';
 import { assistantRoute, assistantEnabled, assistantProvider } from './assistant.js';
+import { documents } from './documents.js';
 
 export const CAPTION_MAX = 200;
 export const COMMENT_MAX = 280;
@@ -627,6 +628,9 @@ api.delete('/admin/members/:id', requireRole('admin'), async (req, res) => {
    ===================================================================== */
 
 api.post('/assistant', assistantRoute);
+
+/* Event documents (itineraries): see server/documents.js */
+api.use(documents);
 
 api.use((req, res) => fail(res, 404, 'Not found.'));
 

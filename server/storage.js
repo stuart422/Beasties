@@ -25,6 +25,13 @@ function localPath(key) {
 
 const blob = () => import('@vercel/blob');
 
+// Local files: the type from the name (photos are JPEG; event documents are PDF or Word).
+const LOCAL_TYPES = {
+  '.pdf': 'application/pdf',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+const localType = (key) => LOCAL_TYPES[key.slice(key.lastIndexOf('.')).toLowerCase()] || 'image/jpeg';
+
 /** Save a file. */
 export async function put(key, data, contentType = 'image/jpeg') {
   if (!validKey(key)) throw new Error('Bad photo path.');
@@ -52,7 +59,7 @@ export async function open(key) {
   }
   const p = localPath(key);
   if (!existsSync(p)) return null;
-  return { stream: createReadStream(p), size: statSync(p).size, contentType: 'image/jpeg' };
+  return { stream: createReadStream(p), size: statSync(p).size, contentType: localType(key) };
 }
 
 /** Read a whole file into memory (used to process an upload). */
@@ -74,4 +81,17 @@ export async function remove(key) {
     return;
   }
   await rm(localPath(key), { force: true });
+}
+
+/**
+ * Private Blob only: a link to one file that works for a few minutes, so a large file
+ * (over Vercel's 4.5 MB response limit) can go straight from storage to a signed-in member.
+ * Returns null for local storage.
+ */
+export async function signedUrl(key, seconds = 300) {
+  if (STORAGE !== 'blob' || !validKey(key)) return null;
+  const { issueSignedToken, presignUrl } = await blob();
+  const validUntil = Date.now() + seconds * 1000;
+  const token = await issueSignedToken({ pathname: key, operations: ['get'], validUntil });
+  return (await presignUrl(token, { operation: 'get', pathname: key, access: 'private', validUntil })).presignedUrl;
 }
