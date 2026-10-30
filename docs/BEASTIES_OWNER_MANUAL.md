@@ -17,13 +17,12 @@
 
 ---
 
-## Read this first: 5 things Stuart should know
+## Read this first: 4 things Stuart should know
 
 1. **Urgent: an old public copy of the site is still online.** The older Cloudflare address, `beasties.pages.dev`, opens **without any sign-in**. On October 30, 2026 it showed 7 Fall 2026 photos (including the group photo) and offered the **Foliage 2026 itinerary PDF** for anyone to download. It is marked "do not index" for search engines, but anyone with the address can open it. This is separate from the private website. **Action for Stuart or Ahmed:** in the Cloudflare dashboard, delete that Pages project or put it behind Cloudflare Access. Nothing was changed there while writing this manual.
 2. **There is no daily backup.** The database is copied only when a website update changes the database structure. Photos have **no backup at all**. A deleted photo is gone for good. Restoring from a backup has **never been tested**. See [Backups](#7-backups-and-what-to-do-if-something-goes-wrong).
 3. **The Beasties Assistant appears to be switched on** on the live site, even though the last written record says it was off. Which mode it uses (free FAQ, Gemini or Anthropic) needs checking. See [Beasties Assistant](#615-beasties-assistant).
 4. **The new itinerary feature is published but has not been used yet.** Nobody has uploaded the itinerary to the live Fall 2026 page, so its live upload has never been tried.
-5. **The countdown spacing fix ("91 days to go") is only on Ahmed's computer.** The live site still shows "91days to go" on the Events page until the next update is published.
 
 ---
 
@@ -283,7 +282,7 @@ If switched on, members see a round **Ask** button. It answers simple "how do Iâ
 | 17a | My photos page | NEEDS VERIFICATION | Live page served; no recorded signed-in live test |
 | 17b | Photo download | NEEDS VERIFICATION | Refuses signed-out visitors (checked); no recorded signed-in live download |
 | 17c | Reduce motion switch | IMPLEMENTED AND LIVE | Part of every live page |
-| 17d | Countdown spacing fix ("91 days to go") | PARTIALLY IMPLEMENTED | Fixed on Ahmed's computer only; live still shows "91days to go" on Events |
+| 17d | Countdown spacing fix ("91 days to go") | IMPLEMENTED AND LIVE | Published 10-30 (commit `69c76d5`); the live Events page code was checked after the update |
 | 17e | Forgot-password link (self-service) | NOT BUILT | |
 | 17f | Email notifications or invitations | NOT BUILT | The site never sends email |
 | 17g | Adding or editing events and albums on the website | NOT BUILT | Developer task |
@@ -305,7 +304,7 @@ If switched on, members see a round **Ask** button. It answers simple "how do Iâ
 - **What:** the next gathering (name, dates, place, "N days to go", and a button to its album), then **Past events**, each linking to its album.
 - **Where:** **Events** in the top bar.
 - **Who:** everyone signed in.
-- **Limits:** events come from the database, which only a developer can change. The live page still shows "91days to go" until the spacing fix is published.
+- **Limits:** events come from the database, which only a developer can change.
 
 #### 6.3 Photo albums â€” IMPLEMENTED AND LIVE
 See [4.1](#41-look-at-photos) and [4.3](#43-add-photos). Nine albums exist. Empty albums say "Photos coming soon".
@@ -617,7 +616,6 @@ Secrets live in Vercel project settings and git-ignored local `.env*` files. The
 - [ ] Confirm the Assistant settings (`ASSISTANT_ENABLED`, `ASSISTANT_PROVIDER`) and record them in the build journal.
 - [ ] Read the 10-30-2026 Vercel build log: was `005` applied, and was a backup point made?
 - [ ] First live itinerary upload on Fall 2026; open it as a member; tap the contents links on iPad.
-- [ ] Publish the countdown spacing fix (`web/src/events-page.js`, `web/src/ui.js`, both uncommitted).
 - [ ] Add a scheduled off-site database backup (for example a GitHub Action or Vercel Cron running `pg_dump` to separate storage), and a periodic Blob copy.
 - [ ] Check the Neon plan's point-in-time restore window. Run one restore test on a Neon branch.
 - [ ] Document a break-glass owner password reset (database update with a new bcrypt hash), since the site has none.
