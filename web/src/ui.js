@@ -151,7 +151,7 @@ export function renderGathering() {
   const days = daysToGathering();
   if (days < 1) return;
   const el = document.getElementById('countdown');
-  el.innerHTML = `<b>${days}</b>${days === 1 ? 'day to go' : 'days to go'}`;
+  el.innerHTML = `<b>${days}</b> ${days === 1 ? 'day to go' : 'days to go'}`;
   el.hidden = false;
 }
 

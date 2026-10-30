@@ -25,7 +25,7 @@ const now = new Date();
 const days = Math.round((new Date(y, m - 1, d) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
 if (days >= 1) {
   const el = document.getElementById('countdown');
-  el.innerHTML = `<b>${days}</b>${days === 1 ? 'day' : 'days'} to go`;
+  el.innerHTML = `<b>${days}</b> ${days === 1 ? 'day' : 'days'} to go`;
   el.hidden = false;
 }
 
